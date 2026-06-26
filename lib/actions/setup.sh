@@ -71,6 +71,40 @@ act_setup() {
   ufw --force enable >/dev/null
   ok "UFW bật: chỉ mở 22, 80, 443."
 
+  # 3.5 Hardening: fail2ban (chống brute-force SSH) + unattended-upgrades (tự vá bảo mật OS)
+  info "Cài fail2ban + unattended-upgrades..."
+  apt-get install -y -qq fail2ban unattended-upgrades >/dev/null 2>&1 || warn "Cài fail2ban/unattended-upgrades lỗi."
+  if [ -d /etc/fail2ban ]; then
+    cat > /etc/fail2ban/jail.local <<'F2B'
+[sshd]
+enabled = true
+maxretry = 5
+findtime = 10m
+bantime = 1h
+F2B
+    systemctl enable --now fail2ban >/dev/null 2>&1 || true
+    systemctl restart fail2ban >/dev/null 2>&1 || true
+  fi
+  cat > /etc/apt/apt.conf.d/20auto-upgrades <<'AUU'
+APT::Periodic::Update-Package-Lists "1";
+APT::Periodic::Unattended-Upgrade "1";
+AUU
+  systemctl enable --now unattended-upgrades >/dev/null 2>&1 || true
+  ok "fail2ban + tự vá bảo mật OS đã bật."
+
+  # 3.6 SSH key-only (TUỲ CHỌN, chỉ khi đã có SSH key -> tránh tự khoá mình ra)
+  if [ -s /root/.ssh/authorized_keys ]; then
+    if ui_yesno "Phát hiện SSH key. Tắt đăng nhập bằng MẬT KHẨU (chỉ cho key, an toàn hơn)?\n\nChỉ chọn Yes nếu chắc chắn vào được bằng key, nếu không sẽ tự khoá mình ra."; then
+      sed -i 's/^#\?PasswordAuthentication .*/PasswordAuthentication no/' /etc/ssh/sshd_config 2>/dev/null
+      grep -q '^PasswordAuthentication no' /etc/ssh/sshd_config 2>/dev/null || echo 'PasswordAuthentication no' >> /etc/ssh/sshd_config
+      [ -f /etc/ssh/sshd_config.d/50-cloud-init.conf ] && sed -i 's/^PasswordAuthentication .*/PasswordAuthentication no/' /etc/ssh/sshd_config.d/50-cloud-init.conf 2>/dev/null || true
+      systemctl reload ssh >/dev/null 2>&1 || systemctl reload sshd >/dev/null 2>&1 || true
+      ok "Đã tắt đăng nhập mật khẩu SSH (chỉ key)."
+    fi
+  else
+    info "Chưa thấy SSH key của root -> giữ đăng nhập mật khẩu. Nên thêm SSH key rồi tắt password sau."
+  fi
+
   # 5. Network chung
   if docker network inspect "$PROXY_NET" >/dev/null 2>&1; then
     ok "Network ${PROXY_NET} đã có."
