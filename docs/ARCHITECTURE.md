@@ -32,9 +32,9 @@
                                │ 80, 443
                     ┌──────────▼──────────┐
                     │   Caddy (1 cổng vào)│  HTTPS tự động (Let's Encrypt)
-                    │   wpfactory_caddy   │  mỗi domain 1 block, cert riêng
+                    │   latvps_caddy   │  mỗi domain 1 block, cert riêng
                     └──────────┬──────────┘
-                               │  network: wpfactory_proxy (chung)
+                               │  network: latvps_proxy (chung)
           ┌────────────────────┼────────────────────┐
           │                    │                     │
    ┌──────▼──────┐      ┌──────▼──────┐       ┌──────▼──────┐
@@ -48,7 +48,7 @@
    dir: /opt/sites/A    /opt/sites/B          /opt/sites/C     (wp-content riêng)
 ```
 
-**Đường đi request:** Internet → UFW → Caddy (TLS) → `wpfactory_proxy` → WP container của
+**Đường đi request:** Internet → UFW → Caddy (TLS) → `latvps_proxy` → WP container của
 đúng domain → DB của chính site đó qua network nội bộ riêng. Không có mũi tên nào nối ngang
 giữa các site.
 
@@ -94,12 +94,12 @@ giữa các site.
 
 | Network | Loại | Ai join | Mục đích |
 |---|---|---|---|
-| `wpfactory_proxy` | external, tạo 1 lần | Caddy + **wp** của mọi site | Caddy → WP. Đây là mặt chung DUY NHẤT. |
+| `latvps_proxy` | external, tạo 1 lần | Caddy + **wp** của mọi site | Caddy → WP. Đây là mặt chung DUY NHẤT. |
 | `site-<slug>_internal` | tạo theo từng site | **wp + db** của RIÊNG site đó | WP ↔ DB nội bộ. Tách biệt mỗi site. |
 
-- DB **không bao giờ** join `wpfactory_proxy` → từ proxy net không có route tới bất kỳ DB nào.
+- DB **không bao giờ** join `latvps_proxy` → từ proxy net không có route tới bất kỳ DB nào.
 - Mỗi `internal` do compose tự sinh theo project name → các site không thấy nhau ở tầng DB.
-- **[ĐỀ XUẤT]** bật `enable_icc=false` cho `wpfactory_proxy` để các WP container không gọi
+- **[ĐỀ XUẤT]** bật `enable_icc=false` cho `latvps_proxy` để các WP container không gọi
   ngang nhau qua HTTP (chỉ Caddy gọi vào được). Phòng trường hợp 1 WP bị chiếm dùng làm bàn
   đạp quét site khác trên cùng proxy net.
 
@@ -143,7 +143,7 @@ Bề mặt còn lại (proxy net chung) chỉ là HTTP, và siết thêm bằng 
 
 | Thành phần | Image | Số lượng | Cổng host | Network |
 |---|---|---|---|---|
-| Caddy | `caddy:2` | 1 | 80, 443 | wpfactory_proxy |
+| Caddy | `caddy:2` | 1 | 80, 443 | latvps_proxy |
 | WP (mỗi site) | `wordpress:6-php8.3-apache` | N | không | proxy + internal |
 | DB (mỗi site) | `mariadb:11` | N | không | internal |
 
@@ -229,7 +229,7 @@ trên VPS nhỏ.
 - [ ] `fail2ban` cho SSH.
 - [ ] `unattended-upgrades` (vá bảo mật OS tự động).
 - [ ] Swapfile nếu RAM < 4GB.
-- [ ] `enable_icc=false` cho `wpfactory_proxy`.
+- [ ] `enable_icc=false` cho `latvps_proxy`.
 - [ ] (Tuỳ chọn) Caddy security headers mặc định (HSTS, X-Frame-Options) cho mọi site.
 
 ---

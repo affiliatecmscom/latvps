@@ -41,7 +41,7 @@ _cf_enable() {
   _cf_env_set "$t"
   write_caddyfile
   info "Khởi động lại Caddy (nạp token)..."
-  _cf_recreate_caddy || warn "Recreate Caddy gặp lỗi — kiểm 'docker logs wpfactory_caddy'."
+  _cf_recreate_caddy || warn "Recreate Caddy gặp lỗi — kiểm 'docker logs latvps_caddy'."
   ui_msg "Đã BẬT Cloudflare DNS (ACME DNS-01).\n\nTrên Cloudflare cho mỗi domain:\n  • Bật proxy (đám mây CAM)\n  • SSL/TLS mode = Full (strict)\n\nCert cấp qua DNS-01, không phụ thuộc proxy. Tạo site như bình thường."
 }
 

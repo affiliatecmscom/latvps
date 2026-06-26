@@ -101,7 +101,7 @@ mới rồi `cd <thư-mục>; claude`.
 ## Cô lập bảo mật
 
 Mỗi site = 1 docker-compose project riêng (`site-<id>`):
-- DB nằm network nội bộ riêng, **không** ra `wpfactory_proxy` → site khác không chạm tới được.
+- DB nằm network nội bộ riêng, **không** ra `latvps_proxy` → site khác không chạm tới được.
 - `wp-content` + volume DB riêng từng site.
 - `no-new-privileges` + `mem_limit`; không publish cổng (chỉ Caddy ra 80/443).
 

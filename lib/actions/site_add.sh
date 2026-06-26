@@ -154,7 +154,7 @@ act_site_add() {
 
   info "Cấu hình Caddy + reload..."
   write_caddy_block "$id" "$domain" "$canonical"
-  caddy_reload || warn "Caddy reload lỗi — kiểm: docker logs wpfactory_caddy"
+  caddy_reload || warn "Caddy reload lỗi — kiểm: docker logs latvps_caddy"
 
   ui_msg "Site đã sẵn sàng: https://${domain}\n\nWP Admin : https://${domain}/wp-admin\nUser     : ${admin_user}\nPassword : ${admin_pass}\nLoại     : ${type}\nThư mục  : ${dir}\n\n>> Trỏ A record '${domain}' về IP VPS này để cấp cert.\n>> Lưu lại mật khẩu trên (sẽ không hiện lại)."
 }

@@ -1,6 +1,6 @@
 # Stack 1 WP site cô lập — sinh bởi new-site.sh. Domain: __DOMAIN__
 # Cô lập: DB nằm network 'internal' riêng (không thể bị site khác chạm); chỉ WP join 'proxy' để Caddy vào.
-# KHÔNG publish port ra host — Caddy reverse_proxy qua network wpfactory_proxy.
+# KHÔNG publish port ra host — Caddy reverse_proxy qua network latvps_proxy.
 name: site-__SLUG__
 
 services:
@@ -45,7 +45,7 @@ networks:
   internal:
   proxy:
     external: true
-    name: wpfactory_proxy
+    name: latvps_proxy
 
 volumes:
   db:

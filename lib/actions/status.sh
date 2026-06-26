@@ -11,7 +11,7 @@ status_text() {
     [ "$st" = "running" ] && up=$((up+1))
   done
 
-  local caddy_st; caddy_st="$(docker inspect -f '{{.State.Status}}' wpfactory_caddy 2>/dev/null || echo down)"
+  local caddy_st; caddy_st="$(docker inspect -f '{{.State.Status}}' latvps_caddy 2>/dev/null || echo down)"
   local mem; mem="$(free -h 2>/dev/null | awk '/Mem:/{print $3" / "$2}')"
   local disk; disk="$(df -h / 2>/dev/null | awk 'NR==2{print $3" / "$2" ("$5")"}')"
 

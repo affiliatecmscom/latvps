@@ -5,7 +5,7 @@
 # Đường dẫn gốc của factory (thư mục chứa lib/).
 WPF_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 SITES_ROOT="/opt/sites"
-PROXY_NET="wpfactory_proxy"
+PROXY_NET="latvps_proxy"
 LICENSE_FILE="${WPF_ROOT}/.license"
 LICENSE_SERVER="https://app.lat.vn/wp-json/acms-license/v1"
 
