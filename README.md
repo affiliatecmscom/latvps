@@ -60,6 +60,20 @@ iflmmo status
 iflmmo rm <id|domain>
 ```
 
+## Cloudflare DNS (bật proxy thoải mái)
+
+Mặc định Caddy xin Let's Encrypt qua HTTP → domain phải để **DNS-only (đám mây xám)**. Nếu muốn
+**bật Cloudflare proxy (đám mây cam)** (ẩn IP VPS, chống DDoS, CDN), dùng menu Bảo trì →
+**"Cloudflare DNS"** (hoặc `iflmmo cloudflare`):
+
+- Nhập **Cloudflare API token** (quyền `Zone.Zone:Read` + `Zone.DNS:Edit`).
+- Caddy chuyển sang xin cert qua **ACME DNS-01** (tạo TXT record qua Cloudflare API) → cấp được
+  cert kể cả khi proxy ON.
+- Sau đó trên Cloudflare: bật proxy (cam) + đặt **SSL/TLS = Full (strict)**.
+
+Caddy được build kèm plugin `caddy-dns/cloudflare` (xcaddy) lúc `setup`. Token lưu `caddy/.env`
+(chmod 600, không commit). Lưu ý: khi bật, **mọi domain phải nằm trên Cloudflare** dưới token đó.
+
 ## Claude Code (trợ lý AI trên VPS)
 
 Menu chính có mục **"Cài Claude Code"** (hoặc `iflmmo install-claude`): cài CLI Claude Code qua

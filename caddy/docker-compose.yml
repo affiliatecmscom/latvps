@@ -5,7 +5,9 @@ name: wpfactory-caddy
 
 services:
   caddy:
-    image: caddy:2
+    build:
+      context: .
+    image: wpfactory-caddy:local
     container_name: wpfactory_caddy
     restart: unless-stopped
     ports:
@@ -13,6 +15,7 @@ services:
       - "443:443"
     environment:
       ACME_EMAIL: ${ACME_EMAIL:-admin@example.com}
+      CF_API_TOKEN: ${CF_API_TOKEN:-}
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - ./sites:/etc/caddy/sites:ro

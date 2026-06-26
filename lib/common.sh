@@ -240,9 +240,35 @@ write_caddy_block() {
   caddy_block "$domain" "${id}_wp" "$canonical" > "${WPF_ROOT}/caddy/sites/${domain}.caddy"
 }
 
+# docker compose cho stack Caddy, LUÔN nạp caddy/.env (ACME_EMAIL, CF_API_TOKEN).
+caddy_compose() {
+  [ -f "${WPF_ROOT}/caddy/.env" ] || touch "${WPF_ROOT}/caddy/.env"
+  docker compose -f "${WPF_ROOT}/caddy/docker-compose.yml" --env-file "${WPF_ROOT}/caddy/.env" "$@"
+}
+
 caddy_reload() {
-  docker compose -f "${WPF_ROOT}/caddy/docker-compose.yml" exec -T caddy \
-    caddy reload --config /etc/caddy/Caddyfile >/dev/null 2>&1
+  caddy_compose exec -T caddy caddy reload --config /etc/caddy/Caddyfile >/dev/null 2>&1
+}
+
+# Đọc 1 biến từ caddy/.env (vd ACME_EMAIL, CF_API_TOKEN).
+caddy_env_get() {
+  local key="$1" f="${WPF_ROOT}/caddy/.env"
+  [ -f "$f" ] || return 1
+  sed -n "s/^${key}=//p" "$f" | head -n1
+}
+
+# Sinh caddy/Caddyfile. Nếu caddy/.env có CF_API_TOKEN -> thêm acme_dns cloudflare (ACME DNS-01).
+# Dùng nháy đơn để giữ NGUYÊN {$ACME_EMAIL}, {env.CF_API_TOKEN} (placeholder của Caddy, không phải bash).
+write_caddyfile() {
+  local cf; cf="$(caddy_env_get CF_API_TOKEN 2>/dev/null || true)"
+  {
+    printf '# Caddyfile trung tâm WP Factory (sinh bởi iflmmo). KHONG sua tay.\n'
+    printf '{\n'
+    printf '\temail {$ACME_EMAIL}\n'
+    [ -n "$cf" ] && printf '\tacme_dns cloudflare {env.CF_API_TOKEN}\n'
+    printf '}\n\n'
+    printf 'import /etc/caddy/sites/*.caddy\n'
+  } > "${WPF_ROOT}/caddy/Caddyfile"
 }
 
 # Host đã bootstrap chưa? (docker + network + wp-cli).

@@ -78,8 +78,11 @@ act_setup() {
     printf 'ACME_EMAIL=%s\n' "$acme_email" > "${WPF_ROOT}/caddy/.env"
     chmod 600 "${WPF_ROOT}/caddy/.env"
   fi
+  write_caddyfile
+  info "Build Caddy (kèm plugin Cloudflare DNS; lần đầu ~2-3 phút)..."
+  caddy_compose build >/dev/null 2>&1 || warn "Build Caddy gặp lỗi — kiểm mạng/docker."
   info "Khởi động Caddy trung tâm..."
-  docker compose -f "${WPF_ROOT}/caddy/docker-compose.yml" up -d
+  caddy_compose up -d
   ok "Caddy đang chạy (cổng 80/443)."
 
   # 8. Symlink iflmmo

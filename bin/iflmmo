@@ -31,6 +31,7 @@ iflmmo — quản lý WP Factory (nhiều WordPress site cô lập trên 1 VPS)
   iflmmo update                   cập nhật hệ thống (image + OS)
   iflmmo self-update              cập nhật chính lệnh iflmmo
   iflmmo install-claude           cài Claude Code (CLI Anthropic) + auth
+  iflmmo cloudflare               bật/tắt Cloudflare DNS (DNS-01) để dùng proxy
   iflmmo payload-sync [src]       cập nhật plugin bundle
   iflmmo setup                    (lại) bootstrap host
   iflmmo version                  phiên bản
@@ -53,6 +54,7 @@ case "$cmd" in
   update)       require_root; act_update ;;
   self-update)  require_root; act_self_update ;;
   install-claude|claude) require_root; act_install_claude ;;
+  cloudflare|cf) require_root; act_cloudflare ;;
   payload-sync) require_root; act_payload_sync "$@" ;;
   setup)        act_setup ;;
   version|-v|--version) cat "${WPF_ROOT}/VERSION" 2>/dev/null || echo "unknown" ;;

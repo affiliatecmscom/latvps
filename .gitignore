@@ -2,6 +2,7 @@
 .license
 caddy/.env
 caddy/sites/*.caddy
+caddy/Caddyfile
 bin/wp-cli.phar
 
 # Payload là bản copy plugin/theme (sinh bởi sync-payload.sh) — không track,
