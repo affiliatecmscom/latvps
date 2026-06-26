@@ -160,6 +160,11 @@ act_site_add() {
   wp_run "$id" rewrite structure '/%postname%/' >/dev/null 2>&1 || true
 
   if [ "$type" = "affiliatecms" ]; then
+    # Plugin PHỤ THUỘC (giống demo iflmmo): Rank Math (AffiliateCMS tích hợp SEO/schema sâu) +
+    # Classic Editor. Tải từ wordpress.org qua wp-cli — KHÔNG có sẽ thiếu SEO/schema.
+    info "Cài plugin phụ thuộc (Rank Math SEO + Classic Editor)..."
+    wp_run "$id" plugin install seo-by-rank-math classic-editor --activate >/dev/null 2>&1 \
+      || warn "Cài Rank Math/Classic Editor lỗi (kiểm mạng) — vào wp-admin cài tay: seo-by-rank-math, classic-editor."
     info "Kích hoạt theme + plugin AffiliateCMS..."
     wp_run "$id" theme activate affiliateCMS-theme >/dev/null 2>&1 || warn "Chưa activate được theme."
     wp_run "$id" plugin activate affiliatecms-pro affiliatecms-ai >/dev/null 2>&1 || warn "Chưa activate được plugin."
