@@ -60,19 +60,24 @@ iflmmo status
 iflmmo rm <id|domain>
 ```
 
-## Cloudflare DNS (bật proxy thoải mái)
+## Cloudflare
 
-Mặc định Caddy xin Let's Encrypt qua HTTP → domain phải để **DNS-only (đám mây xám)**. Nếu muốn
-**bật Cloudflare proxy (đám mây cam)** (ẩn IP VPS, chống DDoS, CDN), dùng menu Bảo trì →
-**"Cloudflare DNS"** (hoặc `iflmmo cloudflare`):
+**Bật proxy (đám mây cam) thoải mái — chỉ cần đặt SSL/TLS = Full** (tránh Flexible). Caddy vẫn tự
+xin Let's Encrypt qua HTTP-01 (đi xuyên proxy được) và Cloudflare cấp SSL ở edge cho khách. Mặc
+định chạy được, **không cần token**.
 
-- Nhập **Cloudflare API token** (quyền `Zone.Zone:Read` + `Zone.DNS:Edit`).
-- Caddy chuyển sang xin cert qua **ACME DNS-01** (tạo TXT record qua Cloudflare API) → cấp được
-  cert kể cả khi proxy ON.
-- Sau đó trên Cloudflare: bật proxy (cam) + đặt **SSL/TLS = Full (strict)**.
+> Tránh chế độ **Flexible** (Caddy ép HTTP→HTTPS → vòng lặp redirect). Dùng **Full** hoặc Full strict.
 
-Caddy được build kèm plugin `caddy-dns/cloudflare` (xcaddy) lúc `setup`. Token lưu `caddy/.env`
-(chmod 600, không commit). Lưu ý: khi bật, **mọi domain phải nằm trên Cloudflare** dưới token đó.
+### (Tùy chọn nâng cao) ACME DNS-01
+
+Chỉ cần khi gặp trường hợp hiếm (port 80 bị chặn, cần wildcard, hoặc HTTP-01 không qua được). Menu
+Bảo trì → **"Cloudflare DNS"** (hoặc `iflmmo cloudflare`): nhập **Cloudflare API token**
+(`Zone.Zone:Read` + `Zone.DNS:Edit`) → Caddy xin cert qua DNS-01 (TXT record qua Cloudflare API).
+Caddy đã build kèm plugin `caddy-dns/cloudflare`. Token lưu `caddy/.env` (chmod 600). Khi bật,
+mọi domain phải nằm trên Cloudflare dưới token đó.
+
+> Cách không-token khác: dùng **Cloudflare Origin Certificate** (cấp trong dashboard, hạn 15 năm),
+> nạp vào Caddy như couponapi. Hiện làm thủ công; chưa có trong menu.
 
 ## Claude Code (trợ lý AI trên VPS)
 
