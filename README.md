@@ -1,5 +1,7 @@
 # LATVPS - `lat` CLI
 
+📖 Tài liệu & hướng dẫn: https://ylg.org/latvps
+
 Quản lý nhiều **WordPress** site trên một VPS Ubuntu, mỗi site **cô lập** (DB + Redis + network +
 volume riêng) để một site bị hack không lây sang site khác. Một lệnh duy nhất: **`lat`**.
 
