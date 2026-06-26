@@ -11,7 +11,8 @@ main_menu() {
       3 "Backup tất cả" \
       4 "License" \
       5 "Trạng thái hệ thống" \
-      6 "Bảo trì / nâng cao" \
+      6 "Cài Claude Code" \
+      7 "Bảo trì / nâng cao" \
       0 "Thoát")" || break
     case "$c" in
       1) act_site_add ;;
@@ -19,7 +20,8 @@ main_menu() {
       3) act_backup all; ui_msg "Backup tất cả xong (xem /opt/backups)." ;;
       4) act_license ;;
       5) act_status ;;
-      6) maintenance_menu ;;
+      6) act_install_claude ;;
+      7) maintenance_menu ;;
       0|"") break ;;
     esac
   done

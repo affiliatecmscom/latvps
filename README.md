@@ -60,6 +60,19 @@ iflmmo status
 iflmmo rm <id|domain>
 ```
 
+## Claude Code (trợ lý AI trên VPS)
+
+Menu chính có mục **"Cài Claude Code"** (hoặc `iflmmo install-claude`): cài CLI Claude Code qua
+native installer, **tự thêm PATH** (installer không tự làm trên root trắng), rồi hỏi auth:
+
+- **OAuth token** (khuyến nghị nếu có gói Claude Pro/Max — không tốn API credits): chạy
+  `claude setup-token` ở máy có trình duyệt để lấy token, dán vào.
+- **API key** `sk-ant-...` (console.anthropic.com, tính theo token).
+- Bỏ qua, auth sau.
+
+Key/token lưu `chmod 600` ở `/root/.config/iflmmo/claude-env`, nạp qua `.bashrc`. Dùng: mở SSH
+mới rồi `cd <thư-mục>; claude`.
+
 ## Hai loại site
 
 - **affiliatecms**: cài sẵn plugin `affiliatecms-pro` + `affiliatecms-ai` + theme, tự activate
