@@ -6,7 +6,7 @@ Quản lý nhiều WordPress site (AffiliateCMS hoặc thường) trên một VP
 ## Cài đặt (VPS Ubuntu trắng) — 1 lần
 
 ```bash
-curl -fsSL https://cdn.lat.vn/iflmmo.sh | sudo bash
+curl -fsSL https://raw.githubusercontent.com/affiliatecmscom/wp-factory/main/iflmmo.sh | sudo bash
 ```
 
 Lệnh này: cài Docker + UFW (chỉ 22/80/443) + Caddy + wp-cli, tạo network, **cài lệnh `iflmmo`**,
