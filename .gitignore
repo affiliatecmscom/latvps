@@ -1,0 +1,11 @@
+# Bí mật + dữ liệu runtime — KHÔNG commit.
+.license
+caddy/.env
+caddy/sites/*.caddy
+bin/wp-cli.phar
+
+# Payload là bản copy plugin/theme (sinh bởi sync-payload.sh) — không track,
+# tránh phình repo + lệch nguồn. Build lại bằng: bash sync-payload.sh
+payload/plugins/
+payload/themes/
+payload/mu-plugins/

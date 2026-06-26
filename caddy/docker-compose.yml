@@ -1,0 +1,31 @@
+# Caddy trung tâm — reverse proxy + HTTPS tự động cho mọi WP site của factory.
+# Đứng trên network wpfactory_proxy chung; mỗi WP container join net này để Caddy vào được.
+# ACME_EMAIL đọc từ caddy/.env (install.sh sinh ra).
+name: wpfactory-caddy
+
+services:
+  caddy:
+    image: caddy:2
+    container_name: wpfactory_caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      ACME_EMAIL: ${ACME_EMAIL:-admin@example.com}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./sites:/etc/caddy/sites:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - proxy
+
+networks:
+  proxy:
+    external: true
+    name: wpfactory_proxy
+
+volumes:
+  caddy_data:
+  caddy_config:

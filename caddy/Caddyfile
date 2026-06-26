@@ -1,0 +1,9 @@
+# Caddyfile trung tâm của WP Factory.
+# Mỗi site sinh 1 file block trong sites/ -> import hết ở đây.
+# Domain có block tường minh => Caddy tự xin cert Let's Encrypt cho đúng domain đó
+# (chỉ cấp cert cho domain đã có site -> không lo xin cert lung tung).
+{
+	email {$ACME_EMAIL}
+}
+
+import /etc/caddy/sites/*.caddy
