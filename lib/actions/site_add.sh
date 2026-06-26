@@ -96,10 +96,24 @@ act_site_add() {
   site_set "$id" ADMIN_EMAIL "$email"
   [ "$type" = "affiliatecms" ] && site_set "$id" LICENSE_KEY "$license"
 
-  # payload chỉ cho affiliatecms
+  # mu-plugin proxy-ssl cho MỌI site (WP sau Caddy cần nhận HTTPS)
+  mkdir -p "$dir/wp-content/mu-plugins"
+  cp "${WPF_ROOT}/assets/mu-plugins/proxy-ssl.php" "$dir/wp-content/mu-plugins/proxy-ssl.php" 2>/dev/null || true
+
+  # plugin/theme chỉ cho affiliatecms — tải từ app.lat.vn nếu payload chưa có
   if [ "$type" = "affiliatecms" ]; then
+    if ! payload_present; then
+      if [ -z "$license" ]; then
+        warn "Chưa có payload cache và chưa có license — cần license để tải plugin lần đầu."
+        _add_rollback; return 1
+      fi
+      info "Payload chưa có — tải từ app.lat.vn (gated theo license)..."
+      fetch_payload "$license" || { warn "Không tải được payload."; _add_rollback; return 1; }
+    fi
     info "Copy plugin/theme AffiliateCMS..."
-    rsync -a --exclude 'uploads/' "${WPF_ROOT}/payload/" "$dir/wp-content/" || { _add_rollback; return 1; }
+    mkdir -p "$dir/wp-content/plugins" "$dir/wp-content/themes"
+    rsync -a "${WPF_ROOT}/payload/plugins/" "$dir/wp-content/plugins/" || { _add_rollback; return 1; }
+    rsync -a "${WPF_ROOT}/payload/themes/"  "$dir/wp-content/themes/"  || { _add_rollback; return 1; }
   fi
 
   info "Khởi động container..."

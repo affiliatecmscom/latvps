@@ -250,3 +250,57 @@ host_ready() {
   need_cmd docker && docker network inspect "$PROXY_NET" >/dev/null 2>&1 \
     && [ -f "${WPF_ROOT}/bin/wp-cli.phar" ]
 }
+
+# ============================================================
+# Payload — tải plugin/theme AffiliateCMS từ license server (app.lat.vn),
+# gated theo license. Repo KHÔNG chứa source plugin (payload/ gitignore).
+# ============================================================
+
+ensure_unzip() {
+  need_cmd unzip && return 0
+  export DEBIAN_FRONTEND=noninteractive
+  apt-get install -y -qq unzip >/dev/null 2>&1
+  need_cmd unzip
+}
+
+# Payload đã có đủ plugin/theme chính chưa?
+payload_present() {
+  [ -d "${WPF_ROOT}/payload/plugins/affiliatecms-pro" ] \
+    && [ -d "${WPF_ROOT}/payload/plugins/affiliatecms-ai" ] \
+    && [ -d "${WPF_ROOT}/payload/themes/affiliateCMS-theme" ]
+}
+
+# Tải payload mới nhất từ license server. Cần license active. Trả 0 nếu đủ.
+# Plugin: gated (plugin= + license_key=). Theme: chỉ slug=. Mỗi zip có 1 thư mục gốc đúng tên.
+fetch_payload() {
+  local key="$1"
+  [ -n "$key" ] || { warn "Cần license để tải payload."; return 1; }
+  ensure_unzip || { warn "Thiếu unzip — không giải nén được payload."; return 1; }
+  local payload="${WPF_ROOT}/payload" tmp; tmp="$(mktemp -d)"
+  mkdir -p "${payload}/plugins" "${payload}/themes"
+  local rc=0 p
+
+  for p in affiliatecms-pro affiliatecms-ai; do
+    info "Tải plugin ${p} từ app.lat.vn..."
+    if curl -fsS --max-time 120 -o "${tmp}/${p}.zip" \
+        "${LICENSE_SERVER}/update/download?plugin=${p}&license_key=${key}&domain=factory"; then
+      rm -rf "${payload}/plugins/${p}"
+      unzip -q -o "${tmp}/${p}.zip" -d "${payload}/plugins/" || { warn "Giải nén ${p} lỗi."; rc=1; }
+    else
+      warn "Tải ${p} thất bại (license còn hạn?)."; rc=1
+    fi
+  done
+
+  info "Tải theme affiliateCMS-theme..."
+  if curl -fsS --max-time 120 -o "${tmp}/theme.zip" \
+      "${LICENSE_SERVER}/update/theme/download?slug=affiliateCMS-theme"; then
+    rm -rf "${payload}/themes/affiliateCMS-theme"
+    unzip -q -o "${tmp}/theme.zip" -d "${payload}/themes/" || { warn "Giải nén theme lỗi."; rc=1; }
+  else
+    warn "Tải theme thất bại."; rc=1
+  fi
+
+  rm -rf "$tmp"
+  [ "$rc" = 0 ] && ok "Payload đã cập nhật từ app.lat.vn." || warn "Payload tải chưa đầy đủ."
+  return "$rc"
+}

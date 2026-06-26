@@ -10,7 +10,7 @@ act_setup() {
   info "Cập nhật apt + cài tiện ích cơ bản..."
   export DEBIAN_FRONTEND=noninteractive
   apt-get update -qq
-  apt-get install -y -qq ca-certificates curl gnupg openssl ufw rsync whiptail >/dev/null
+  apt-get install -y -qq ca-certificates curl gnupg openssl ufw rsync whiptail unzip git >/dev/null
 
   # 2. Docker CE + compose
   if need_cmd docker && docker compose version >/dev/null 2>&1; then

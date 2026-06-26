@@ -12,8 +12,23 @@ curl -fsSL https://cdn.lat.vn/iflmmo.sh | sudo bash
 Lệnh này: cài Docker + UFW (chỉ 22/80/443) + Caddy + wp-cli, tạo network, **cài lệnh `iflmmo`**,
 hỏi license (bỏ qua được — site vanilla không cần), rồi hỏi tạo site đầu tiên.
 
-> Nguồn code lấy từ repo `IFLMMO_REPO` (mặc định GitHub). Đặt CDN/repo thật trước khi phát hành
-> cho học viên. Nếu đã có sẵn `/opt/wp-factory`, chạy thẳng: `sudo /opt/wp-factory/bin/iflmmo setup`.
+> Code lấy từ repo public `github.com/affiliatecmscom/wp-factory` (clone không cần token).
+> Nếu đã có sẵn `/opt/wp-factory`, chạy thẳng: `sudo /opt/wp-factory/bin/iflmmo setup`.
+
+## Nguồn plugin/theme (payload)
+
+Repo **không** chứa source plugin. Khi tạo site AffiliateCMS, plugin/theme được **tải từ
+`app.lat.vn` gated theo license** (`fetch_payload`), cache vào `payload/`. mu-plugin `proxy-ssl`
+(WP sau Caddy) ship sẵn trong `assets/`, copy cho mọi site.
+
+## Cập nhật
+
+| Cần update | Lệnh / cơ chế | Nguồn |
+|---|---|---|
+| Lệnh `iflmmo` (code) | `iflmmo self-update` (git pull, repo public) | GitHub |
+| Plugin/theme site ĐÃ tạo | Tự update trong wp-admin | app.lat.vn |
+| Plugin/theme site TẠO MỚI | tải mới nhất lúc `add`; `iflmmo payload-sync` để refresh cache | app.lat.vn |
+| Image WP/MariaDB/Caddy + OS | `iflmmo update` | Docker Hub / apt |
 
 ## Dùng hằng ngày: gõ `iflmmo`
 
@@ -73,6 +88,7 @@ thuộc tính trong `/opt/sites/<id>/site.conf`. Đổi domain = search-replace 
   bin/iflmmo            # dispatcher + symlink /usr/local/bin/iflmmo
   iflmmo.sh             # bootstrap 1 lệnh
   lib/common.sh ui.sh menu.sh  actions/*.sh
+  assets/mu-plugins/proxy-ssl.php   # ship kèm, copy cho mọi site
   templates/  caddy/  payload/  VERSION
 /opt/sites/<id>/        # data mỗi site: site.conf + compose + .env + wp-content
 /opt/backups/<id>/      # backup
@@ -81,4 +97,5 @@ thuộc tính trong `/opt/sites/<id>/site.conf`. Đổi domain = search-replace 
 ## Lưu ý nhân bản
 - Bộ này standalone (tự mang Caddy, bind 80/443) → để deploy sang VPS mới. Trên VPS đã chạy stack
   khác chiếm 80/443 sẽ xung đột cổng (đổi tạm port Caddy để test).
-- `payload/` (plugin/theme) build từ demo qua `iflmmo payload-sync`, không track git.
+- `payload/` (plugin/theme) tải từ app.lat.vn gated license, không track git. Dev có thể nạp từ
+  wp-content local: `iflmmo payload-sync --from /path/to/wp-content`.
