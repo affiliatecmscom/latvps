@@ -49,7 +49,7 @@ for k in KEYS:
 # An toàn: quét secret pattern trong toàn bộ giá trị.
 blob=json.dumps(out)
 import re
-bad=re.findall(r'sk-[A-Za-z0-9]{6,}|AIza[0-9A-Za-z_\-]{10,}|-----BEGIN|ACMS-[0-9A-F]{4}-', blob)
+bad=re.findall(r'sk-[A-Za-z0-9]{6,}|AIza[0-9A-Za-z_\-]{10,}|-----BEGIN|ACMS-[0-9A-F]{4}-|AKIA[0-9A-Z]{16}|amzn1\.oa2-cs\.', blob)
 if bad:
     raise SystemExit(f"!! PHÁT HIỆN SECRET trong export: {set(bad)} - DỪNG, không ghi file.")
 
