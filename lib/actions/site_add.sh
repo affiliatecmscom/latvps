@@ -218,6 +218,9 @@ act_site_add() {
     # License: gọi ĐÚNG hàm activate của plugin (LicenseGuard::activate) -> set acms_license_key +
     # acms_license_status=active + acms_activated_domain + ai_enabled (có verify chữ ký server).
     # Chỉ update_option key là KHÔNG đủ -> plugin vẫn báo "chưa có license" (gate theo status local).
+    if [ -n "$license" ] && ! printf '%s' "$license" | grep -qiE '^ACMS-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}$'; then
+      warn "License sai định dạng - bỏ qua kích hoạt."; license=""
+    fi
     if [ -n "$license" ]; then
       info "Kích hoạt license qua plugin..."
       local _lcode _lr

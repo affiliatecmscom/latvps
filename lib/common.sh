@@ -307,15 +307,14 @@ acms_import_demo_content() {
   local id="$1" canon_host="$2" admin_user="$3" admin_pass="$4" admin_email="$5" license="$6"
   [ -n "$license" ] || { warn "Chưa có license - bỏ qua nội dung demo (gated)."; return 1; }
   local dir; dir="$(site_dir "$id")"
-  local db_pass; db_pass="$(grep -E '^DB_PASSWORD=' "${dir}/.env" | head -1 | cut -d= -f2-)"
-  [ -n "$db_pass" ] || { warn "Không đọc được DB_PASSWORD site."; return 1; }
 
   local ex; ex="$(mktemp -d)"
   info "Tải bundle nội dung demo từ app.lat.vn..."
   fetch_demo_bundle "$license" "$ex" || { rm -rf "$ex"; return 1; }
 
+  # DB ops dùng MARIADB_PASSWORD TRONG container (không đưa mật khẩu lên dòng lệnh host -> tránh lộ qua ps).
   info "Nạp database demo (đè) ..."
-  if ! docker exec -i "${id}_db" mariadb -uwordpress -p"$db_pass" wordpress < "${ex}/database.sql"; then
+  if ! docker exec -i "${id}_db" sh -c 'exec mariadb -uwordpress -p"$MARIADB_PASSWORD" wordpress' < "${ex}/database.sql"; then
     warn "Nạp database demo lỗi."; rm -rf "$ex"; return 1
   fi
   if [ -d "${ex}/uploads" ]; then
@@ -332,16 +331,14 @@ acms_import_demo_content() {
   # để admin mới = ID 1 (đúng author demo). Vẫn reassign như lưới phụ.
   info "Tạo tài khoản admin..."
   # Reset AUTO_INCREMENT=1 -> admin mới = ID 1 = đúng author của mọi bài demo (giữ tác giả).
-  docker exec "${id}_db" mariadb -uwordpress -p"$db_pass" wordpress \
-    -e "ALTER TABLE wp_users AUTO_INCREMENT=1;" >/dev/null 2>&1 || true
+  docker exec "${id}_db" sh -c 'mariadb -uwordpress -p"$MARIADB_PASSWORD" wordpress -e "ALTER TABLE wp_users AUTO_INCREMENT=1;"' >/dev/null 2>&1 || true
   local admin_id
   admin_id="$(wp_run "$id" user create "$admin_user" "$admin_email" --role=administrator --user_pass="$admin_pass" --porcelain 2>/dev/null | tr -d '[:space:]')"
   printf '%s' "$admin_id" | grep -qE '^[0-9]+$' \
     || admin_id="$(wp_run "$id" user list --role=administrator --field=ID 2>/dev/null | head -1 | tr -d '[:space:]')"
   if printf '%s' "$admin_id" | grep -qE '^[0-9]+$'; then
-    # Lưới phụ (phòng admin_id != 1): gán lại tác giả mọi bài/trang về admin bằng SQL trực tiếp.
-    docker exec "${id}_db" mariadb -uwordpress -p"$db_pass" wordpress \
-      -e "UPDATE wp_posts SET post_author=${admin_id} WHERE post_author>0;" >/dev/null 2>&1 || true
+    # Lưới phụ (phòng admin_id != 1): gán lại tác giả mọi bài/trang về admin (SQL trực tiếp, pass trong container).
+    docker exec "${id}_db" sh -c "mariadb -uwordpress -p\"\$MARIADB_PASSWORD\" wordpress -e \"UPDATE wp_posts SET post_author=${admin_id} WHERE post_author>0;\"" >/dev/null 2>&1 || true
     ok "Admin (ID ${admin_id}) + tác giả bài viết đã gán."
   else
     warn "Không tạo được admin sau clone - kiểm tra wp-admin."
