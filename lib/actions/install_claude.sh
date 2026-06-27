@@ -8,11 +8,14 @@ CLAUDE_ENV_DIR="/root/.config/lat"
 CLAUDE_ENV_FILE="${CLAUDE_ENV_DIR}/claude-env"
 CLAUDE_BASHRC="/root/.bashrc"
 
-# Đảm bảo ~/.local/bin trong PATH (.bashrc) + trong process hiện tại.
+# Đảm bảo ~/.local/bin trong PATH (.bashrc) + process hiện tại + symlink toàn cục.
 _claude_ensure_path() {
   grep -q '.local/bin' "$CLAUDE_BASHRC" 2>/dev/null \
     || printf '\n# Claude Code\nexport PATH="$HOME/.local/bin:$PATH"\n' >> "$CLAUDE_BASHRC"
   case ":$PATH:" in *":/root/.local/bin:"*) ;; *) export PATH="/root/.local/bin:$PATH";; esac
+  # symlink vào /usr/local/bin (luôn trong PATH mọi shell/root) -> 'claude' chạy ngay,
+  # không phải source ~/.bashrc hay mở SSH mới.
+  [ -x "$CLAUDE_BIN" ] && ln -sf "$CLAUDE_BIN" /usr/local/bin/claude 2>/dev/null || true
 }
 
 # Lưu biến auth vào file chmod 600 + nạp từ .bashrc.
@@ -40,22 +43,34 @@ _claude_auth_prompt() {
   case "$choice" in
     oauth)
       # Claude Code đã cài SẴN trên VPS -> chạy 'claude setup-token' tại chỗ.
-      # Nó in ra MỘT ĐƯỜNG LINK: mở link bằng trình duyệt đang đăng nhập Claude
-      # (Pro/Max) trên máy bất kỳ, đồng ý, rồi làm theo hướng dẫn trên màn hình.
+      # Nó in ra ĐƯỜNG LINK: mở bằng trình duyệt đang đăng nhập Claude (Pro/Max),
+      # đồng ý, làm theo màn hình. Token in ra sẽ được TỰ BẮT + lưu (không dán tay).
       _claude_ensure_path
       if [ ! -x "$CLAUDE_BIN" ] && ! command -v claude >/dev/null 2>&1; then
         warn "Chưa thấy claude - cài Claude Code trước rồi đăng nhập."; return 0
       fi
-      ui_msg "Sắp chạy 'claude setup-token' ngay trên VPS.\n\nNó sẽ HIỆN MỘT ĐƯỜNG LINK. Hãy:\n 1) Copy link, mở bằng trình duyệt ĐANG ĐĂNG NHẬP Claude (Pro/Max).\n 2) Bấm Authorize/Đồng ý.\n 3) Làm theo hướng dẫn trên màn hình (dán mã nếu được hỏi).\n\nNhấn Enter để bắt đầu."
-      "$CLAUDE_BIN" setup-token </dev/tty || warn "setup-token chưa xong - chạy lại bất cứ lúc nào: claude setup-token"
-      # Nếu màn hình in ra token (sk-ant-oat...), cho lưu vào env để dùng kiểu headless.
-      local t; t="$(ui_input "Nếu có hiện token 'sk-ant-oat...', dán vào đây để lưu (Enter=bỏ qua):" "")" || t=""
-      t="$(printf '%s' "$t" | tr -d '[:space:]')"
+      ui_msg "Sắp chạy 'claude setup-token' ngay trên VPS.\n\nNó sẽ HIỆN MỘT ĐƯỜNG LINK. Hãy:\n 1) Copy link, mở bằng trình duyệt ĐANG ĐĂNG NHẬP Claude (Pro/Max).\n 2) Bấm Authorize/Đồng ý, làm theo hướng dẫn trên màn hình.\n\nXong xuôi, token sẽ TỰ ĐƯỢC LƯU - bạn KHÔNG cần copy tay.\nNhấn Enter để bắt đầu."
+      # Chạy trong pty (script) để giữ giao diện tương tác mà vẫn bắt được output -> token.
+      local _cap; _cap="$(mktemp)"
+      if command -v script >/dev/null 2>&1; then
+        script -qec "'$CLAUDE_BIN' setup-token" "$_cap" </dev/tty || true
+      else
+        "$CLAUDE_BIN" setup-token </dev/tty 2>&1 | tee "$_cap" || true
+      fi
+      local t; t="$(grep -aoE 'sk-ant-oat[0-9A-Za-z_-]+' "$_cap" | head -1)"
+      rm -f "$_cap"
       if [ -n "$t" ]; then
         sed -i '/^export ANTHROPIC_API_KEY=/d' "$CLAUDE_ENV_FILE" 2>/dev/null || true
-        _claude_save_env CLAUDE_CODE_OAUTH_TOKEN "$t"; ok "Đã lưu OAuth token."
+        _claude_save_env CLAUDE_CODE_OAUTH_TOKEN "$t"
+        ui_msg "Đăng nhập Claude Code XONG. Token đã tự lưu.\nGõ 'claude' để dùng (chạy được ngay, không cần mở SSH mới)."
       else
-        ok "Hoàn tất. Nếu setup-token đã đăng nhập thành công, 'claude' dùng được luôn."
+        warn "Chưa tự bắt được token."
+        t="$(ui_input "Nếu màn hình có hiện 'sk-ant-oat...', dán vào (Enter=bỏ qua):" "")" || t=""
+        t="$(printf '%s' "$t" | tr -d '[:space:]')"
+        if [ -n "$t" ]; then
+          sed -i '/^export ANTHROPIC_API_KEY=/d' "$CLAUDE_ENV_FILE" 2>/dev/null || true
+          _claude_save_env CLAUDE_CODE_OAUTH_TOKEN "$t"; ok "Đã lưu OAuth token."
+        fi
       fi
       ;;
     apikey)
@@ -78,6 +93,7 @@ _claude_uninstall() {
   rm -rf /root/.local/share/claude 2>/dev/null || true
   # gỡ phần auth lat thêm vào .bashrc + xoá env file
   rm -f "$CLAUDE_ENV_FILE"
+  rm -f /usr/local/bin/claude 2>/dev/null || true   # symlink toàn cục
   sed -i '/# Claude Code auth (lat)/d' "$CLAUDE_BASHRC" 2>/dev/null || true
   sed -i '\#claude-env#d' "$CLAUDE_BASHRC" 2>/dev/null || true
   if ui_yesno "Xoá luôn cấu hình + token đăng nhập của Claude (~/.claude, ~/.config/claude)?"; then
@@ -119,5 +135,5 @@ act_install_claude() {
 
   _claude_auth_prompt
 
-  ui_msg "Claude Code đã cài: ${ver:-?}\n\nDùng (mở SSH MỚI hoặc 'source ~/.bashrc' trước):\n  cd /opt/sites/<id>\n  claude\n\nNếu bỏ qua auth: set ANTHROPIC_API_KEY hoặc CLAUDE_CODE_OAUTH_TOKEN rồi mở shell mới.\nCập nhật: tự động khi chạy (hoặc 'claude update')."
+  ui_msg "Claude Code đã cài: ${ver:-?}\n\nDùng ngay (gõ 'claude' ở đâu cũng được - đã symlink toàn cục):\n  cd /opt/sites/<id>\n  claude\n\nNếu bỏ qua auth: vào lại mục này chọn 'auth' để đăng nhập.\nCập nhật: tự động khi chạy (hoặc 'claude update')."
 }
