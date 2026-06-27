@@ -304,6 +304,9 @@ acms_import_demo_content() {
   # Trang chủ = bài mới nhất (giống demo).
   wp_run "$id" option update show_on_front posts >/dev/null 2>&1 || true
   wp_run "$id" eval 'wp_cache_flush();' >/dev/null 2>&1 || true
+  # Gỡ WordPress Importer (chỉ cần lúc import xong là thừa).
+  wp_run "$id" plugin deactivate wordpress-importer >/dev/null 2>&1 || true
+  wp_run "$id" plugin delete wordpress-importer >/dev/null 2>&1 || true
   ok "Đã import nội dung demo."
 }
 

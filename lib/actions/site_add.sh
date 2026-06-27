@@ -178,6 +178,8 @@ act_site_add() {
   # Mặc định CHẶN search engine index -> tránh trùng lặp nội dung giữa các site học viên
   # (nội dung/cấu hình giống demo). Khi site chạy thật: Settings > Reading, bỏ tick Discourage.
   wp_run "$id" option update blog_public 0 >/dev/null 2>&1 || true
+  # Bỏ Hello Dolly (plugin mặc định WP, thừa).
+  wp_run "$id" plugin delete hello >/dev/null 2>&1 || true
 
   if [ "$type" = "affiliatecms" ]; then
     # Plugin PHỤ THUỘC (giống demo iflmmo): Rank Math (AffiliateCMS tích hợp SEO/schema sâu) +
