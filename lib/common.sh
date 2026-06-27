@@ -327,11 +327,19 @@ acms_import_demo_content() {
   [ -n "$demo_host" ] || demo_host="iflmmo.affiliatecms.com"
   rm -rf "$ex"
 
-  # Dump đã bỏ data wp_users -> tạo lại admin (sẽ là ID 1 vì bảng rỗng -> giữ quyền tác giả bài demo).
+  # Dump bỏ data wp_users -> tạo lại admin. LƯU Ý: structure dump giữ AUTO_INCREMENT cũ nên
+  # admin mới KHÔNG chắc là ID 1 -> phải GÁN LẠI tác giả mọi bài cho admin mới (tránh mất author).
   info "Tạo tài khoản admin..."
-  wp_run "$id" user create "$admin_user" "$admin_email" --role=administrator --user_pass="$admin_pass" >/dev/null 2>&1 \
-    || wp_run "$id" user update 1 --user_pass="$admin_pass" --user_email="$admin_email" >/dev/null 2>&1 \
-    || warn "Tạo admin sau clone lỗi - kiểm tra wp-admin."
+  local admin_id
+  admin_id="$(wp_run "$id" user create "$admin_user" "$admin_email" --role=administrator --user_pass="$admin_pass" --porcelain 2>/dev/null | tr -d '[:space:]')"
+  printf '%s' "$admin_id" | grep -qE '^[0-9]+$' \
+    || admin_id="$(wp_run "$id" user list --role=administrator --field=ID 2>/dev/null | head -1 | tr -d '[:space:]')"
+  if printf '%s' "$admin_id" | grep -qE '^[0-9]+$'; then
+    wp_run "$id" eval 'global $wpdb; $wpdb->query("UPDATE {$wpdb->posts} SET post_author='"$admin_id"' WHERE post_author > 0");' >/dev/null 2>&1 || true
+    ok "Admin (ID ${admin_id}) + gán lại tác giả bài viết."
+  else
+    warn "Không tạo được admin sau clone - kiểm tra wp-admin."
+  fi
 
   info "Đổi URL demo -> ${canon_host} ..."
   wp_run "$id" search-replace "$demo_host" "$canon_host" --all-tables --skip-columns=guid >/dev/null 2>&1 || true
