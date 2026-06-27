@@ -141,6 +141,15 @@ AUU
   chmod +x "${WPF_ROOT}/bin/lat"
   ok "Lệnh 'lat' đã sẵn sàng."
 
+  # 8.5 Thông báo cập nhật khi đăng nhập SSH (profile.d) + lấy cache lần đầu.
+  if [ -f "${WPF_ROOT}/assets/profile-latvps-update.sh" ]; then
+    install -m 0644 "${WPF_ROOT}/assets/profile-latvps-update.sh" \
+      /etc/profile.d/latvps-update.sh 2>/dev/null \
+      && ok "Đã bật thông báo cập nhật lúc đăng nhập SSH." \
+      || warn "Không cài được thông báo cập nhật (bỏ qua)."
+    act_update_check --refresh >/dev/null 2>&1 || true   # tạo cache .update-state ngay
+  fi
+
   ui_msg "Host đã sẵn sàng.\n\nGõ:  lat   để mở menu quản lý.\nTạo site nhanh:  lat add <domain>\n\nNhớ trỏ A record của domain về IP VPS này trước khi tạo site."
 
   # 9. Gợi ý tạo site đầu tiên

@@ -1,5 +1,6 @@
 # Bí mật + dữ liệu runtime - KHÔNG commit.
 .license
+.update-state
 proxy/.env
 bin/wp-cli.phar
 

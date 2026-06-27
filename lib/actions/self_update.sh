@@ -27,6 +27,10 @@ act_self_update() {
       _syntax_ok "$WPF_ROOT" || { warn "Bản mới có lỗi cú pháp - cân nhắc rollback bằng git."; return 1; }
       chmod +x "${WPF_ROOT}/bin/lat" 2>/dev/null || true
       ln -sf "${WPF_ROOT}/bin/lat" /usr/local/bin/lat
+      # Cài/làm mới profile.d (bản mới có thể đổi script) + cập nhật cache để tắt thông báo.
+      [ -f "${WPF_ROOT}/assets/profile-latvps-update.sh" ] \
+        && install -m 0644 "${WPF_ROOT}/assets/profile-latvps-update.sh" /etc/profile.d/latvps-update.sh 2>/dev/null || true
+      act_update_check --refresh >/dev/null 2>&1 || true
       ui_msg "Đã cập nhật lat qua git.\nPhiên bản: $(_current_version)\nChạy lại 'lat' để dùng bản mới."
       return 0
     fi

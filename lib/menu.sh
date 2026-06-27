@@ -91,16 +91,18 @@ maintenance_menu() {
     c="$(ui_menu "Bảo trì / nâng cao" \
       1 "Cập nhật hệ thống (image WP/MariaDB/nginx + OS) [lat upgrade]" \
       2 "Cập nhật lệnh lat (code) [lat update]" \
-      3 "Cập nhật plugin payload (cho site tạo sau)" \
-      4 "Cronjob (cài cron AffiliateCMS / thêm cron)" \
-      5 "Chạy lại setup host (idempotent)" \
+      3 "Kiểm tra có bản lat mới không [lat update-check]" \
+      4 "Cập nhật plugin payload (cho site tạo sau)" \
+      5 "Cronjob (cài cron AffiliateCMS / thêm cron)" \
+      6 "Chạy lại setup host (idempotent)" \
       0 "Quay lại")" || return
     case "$c" in
       1) act_update ;;
       2) act_self_update ;;
-      3) act_payload_sync; ui_msg "Payload đã cập nhật." ;;
-      4) act_cron ;;
-      5) act_setup ;;
+      3) act_update_check ;;
+      4) act_payload_sync; ui_msg "Payload đã cập nhật." ;;
+      5) act_cron ;;
+      6) act_setup ;;
       0|"") return ;;
     esac
   done
