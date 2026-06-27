@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
-# lib/ui.sh - lớp giao diện trung lập. Có whiptail thì dùng TUI; không thì fallback menu số.
+# lib/ui.sh - lớp giao diện.
+# CHỈ hỏi-đáp TỪNG DÒNG trong terminal (hợp SSH, học viên dễ dùng, không vỡ layout).
+# KHÔNG dùng bảng TUI whiptail (box ở giữa hay vỡ/đen trên nhiều terminal -> bỏ hẳn).
 # Mọi hàm trả KẾT QUẢ qua stdout (để $() bắt được), vẽ UI ra stderr/terminal.
 
-HAS_WHIPTAIL=0
-command -v whiptail >/dev/null 2>&1 && HAS_WHIPTAIL=1
+HAS_WHIPTAIL=0  # luôn tắt: dùng hỏi-đáp từng dòng cho mọi bước.
 
 # ui_menu "TITLE"  tag1 "label1"  tag2 "label2" ...  -> in tag được chọn. Return !=0 nếu Huỷ.
 ui_menu() {
@@ -14,16 +15,22 @@ ui_menu() {
     whiptail --title "lat" --notags --menu "$title" 20 74 "$n" "$@" 3>&1 1>&2 2>&3
     return $?
   fi
-  # Fallback: in danh sách ra stderr, đọc tag từ tty.
+  # Fallback dòng: đánh SỐ từng lựa chọn, người dùng gõ số cho nhanh (không phải gõ tag dài).
   printf '\n== %s ==\n' "$title" >&2
-  local items=("$@") i
+  local items=("$@") i n=0 tags=()
   for ((i=0; i<${#items[@]}; i+=2)); do
-    printf '  %s) %s\n' "${items[i]}" "${items[i+1]}" >&2
+    n=$((n+1)); tags+=("${items[i]}")
+    printf '  %d) %s\n' "$n" "${items[i+1]}" >&2
   done
-  printf 'Chọn: ' >&2
-  local choice; read -r choice </dev/tty || return 1
-  [ -n "$choice" ] || return 1
-  printf '%s' "$choice"
+  local choice
+  while true; do
+    printf 'Chọn [1-%d]: ' "$n" >&2
+    read -r choice </dev/tty || return 1
+    if [[ "$choice" =~ ^[0-9]+$ ]] && [ "$choice" -ge 1 ] && [ "$choice" -le "$n" ]; then
+      printf '%s' "${tags[choice-1]}"; return 0
+    fi
+    printf 'Nhập số từ 1 đến %d.\n' "$n" >&2
+  done
 }
 
 # ui_input "PROMPT" "DEFAULT" -> in giá trị nhập (hoặc default). Return !=0 nếu Huỷ (whiptail).
@@ -33,7 +40,9 @@ ui_input() {
     whiptail --title "lat" --inputbox "$prompt" 11 74 "$def" 3>&1 1>&2 2>&3
     return $?
   fi
-  printf '%s [%s]: ' "$prompt" "$def" >&2
+  printf '%b' "$prompt" >&2
+  [ -n "$def" ] && printf ' [%s]' "$def" >&2
+  printf ': ' >&2
   local v; read -r v </dev/tty || return 1
   printf '%s' "${v:-$def}"
 }
@@ -50,7 +59,8 @@ ui_yesno() {
     [ "$ans" = "yes" ]
     return $?
   fi
-  printf '%s [y/N]: ' "$msg" >&2
+  printf '%b' "$msg" >&2
+  printf ' [y/N]: ' >&2
   local a; read -r a </dev/tty || return 1
   case "$a" in [Yy]*) return 0;; *) return 1;; esac
 }
@@ -60,7 +70,7 @@ ui_msg() {
   if [ "$HAS_WHIPTAIL" = 1 ]; then
     whiptail --title "lat" --scrolltext --msgbox "$1" 20 74
   else
-    printf '\n%s\n' "$1" >&2
+    printf '\n' >&2; printf '%b' "$1" >&2; printf '\n' >&2
     printf '[Enter để tiếp tục] ' >&2; read -r _ </dev/tty || true
   fi
 }
