@@ -3,6 +3,9 @@
 
 main_menu() {
   host_ready || { ui_msg "Host chưa sẵn sàng (thiếu Docker/proxy).\n\nChạy lệnh cài đặt 1 lần trước:\n  curl -fsSL https://raw.githubusercontent.com/affiliatecmscom/latvps/main/latvps.sh | sudo bash"; exit 1; }
+  # Tầng menu là tương tác: KHÔNG để set -e thoát cả lat khi 1 action trả về !=0
+  # (vd user gõ 0 để huỷ giữa chừng). Mỗi action tự xử lý lỗi/rollback bên trong.
+  set +e
   while true; do
     local c
     c="$(ui_menu "LATVPS - quản lý site" \

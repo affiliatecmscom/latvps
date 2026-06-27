@@ -15,21 +15,28 @@ ui_menu() {
     whiptail --title "lat" --notags --menu "$title" 20 74 "$n" "$@" 3>&1 1>&2 2>&3
     return $?
   fi
-  # Fallback dòng: đánh SỐ từng lựa chọn, người dùng gõ số cho nhanh (không phải gõ tag dài).
+  # Fallback dòng: đánh SỐ từng lựa chọn (gõ số cho nhanh). LUÔN có 0 = Quay lại/Thoát.
+  # Mục có sẵn tag "0" (vd Thoát/Quay lại) hiện đúng ở số 0; các mục khác đánh số 1..n.
   printf '\n== %s ==\n' "$title" >&2
-  local items=("$@") i n=0 tags=()
+  local items=("$@") i n=0 tags=() zero_label=""
   for ((i=0; i<${#items[@]}; i+=2)); do
+    if [ "${items[i]}" = "0" ]; then zero_label="${items[i+1]}"; continue; fi
     n=$((n+1)); tags+=("${items[i]}")
     printf '  %d) %s\n' "$n" "${items[i+1]}" >&2
   done
+  printf '  0) %s\n' "${zero_label:-Quay lại}" >&2
   local choice
   while true; do
-    printf 'Chọn [1-%d]: ' "$n" >&2
+    printf 'Chọn [0-%d]: ' "$n" >&2
     read -r choice </dev/tty || return 1
+    if [ "$choice" = "0" ]; then
+      [ -n "$zero_label" ] && { printf '0'; return 0; }  # menu có mục 0 -> trả tag "0"
+      return 1                                            # không có -> coi như quay lại/huỷ
+    fi
     if [[ "$choice" =~ ^[0-9]+$ ]] && [ "$choice" -ge 1 ] && [ "$choice" -le "$n" ]; then
       printf '%s' "${tags[choice-1]}"; return 0
     fi
-    printf 'Nhập số từ 1 đến %d.\n' "$n" >&2
+    printf 'Nhập số từ 0 đến %d.\n' "$n" >&2
   done
 }
 
@@ -40,10 +47,13 @@ ui_input() {
     whiptail --title "lat" --inputbox "$prompt" 11 74 "$def" 3>&1 1>&2 2>&3
     return $?
   fi
-  printf '%b' "$prompt" >&2
+  # Bỏ 1 dấu ':' cuối prompt (nếu có) để không bị '::' khi mình tự thêm gợi ý.
+  local p="${prompt%:}"
+  printf '%b' "$p" >&2
   [ -n "$def" ] && printf ' [%s]' "$def" >&2
-  printf ': ' >&2
+  printf ' (0=quay lại): ' >&2
   local v; read -r v </dev/tty || return 1
+  [ "$v" = "0" ] && return 1   # gõ 0 = quay lại/huỷ ở mọi bước nhập
   printf '%s' "${v:-$def}"
 }
 
