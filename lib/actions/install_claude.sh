@@ -39,14 +39,24 @@ _claude_auth_prompt() {
     skip   "Bỏ qua, đăng nhập sau")" || return 0
   case "$choice" in
     oauth)
-      ui_msg "Lấy token: trên máy CÓ trình duyệt (laptop) đã cài Claude Code, chạy:\n\n  claude setup-token\n\nĐăng nhập rồi copy token, dán vào bước sau."
-      local t; t="$(ui_input "Dán CLAUDE_CODE_OAUTH_TOKEN:" "")" || return 0
+      # Claude Code đã cài SẴN trên VPS -> chạy 'claude setup-token' tại chỗ.
+      # Nó in ra MỘT ĐƯỜNG LINK: mở link bằng trình duyệt đang đăng nhập Claude
+      # (Pro/Max) trên máy bất kỳ, đồng ý, rồi làm theo hướng dẫn trên màn hình.
+      _claude_ensure_path
+      if [ ! -x "$CLAUDE_BIN" ] && ! command -v claude >/dev/null 2>&1; then
+        warn "Chưa thấy claude - cài Claude Code trước rồi đăng nhập."; return 0
+      fi
+      ui_msg "Sắp chạy 'claude setup-token' ngay trên VPS.\n\nNó sẽ HIỆN MỘT ĐƯỜNG LINK. Hãy:\n 1) Copy link, mở bằng trình duyệt ĐANG ĐĂNG NHẬP Claude (Pro/Max).\n 2) Bấm Authorize/Đồng ý.\n 3) Làm theo hướng dẫn trên màn hình (dán mã nếu được hỏi).\n\nNhấn Enter để bắt đầu."
+      "$CLAUDE_BIN" setup-token </dev/tty || warn "setup-token chưa xong - chạy lại bất cứ lúc nào: claude setup-token"
+      # Nếu màn hình in ra token (sk-ant-oat...), cho lưu vào env để dùng kiểu headless.
+      local t; t="$(ui_input "Nếu có hiện token 'sk-ant-oat...', dán vào đây để lưu (Enter=bỏ qua):" "")" || t=""
       t="$(printf '%s' "$t" | tr -d '[:space:]')"
       if [ -n "$t" ]; then
-        # token được ưu tiên -> xoá API key cũ (nếu có) để không bị đè
         sed -i '/^export ANTHROPIC_API_KEY=/d' "$CLAUDE_ENV_FILE" 2>/dev/null || true
         _claude_save_env CLAUDE_CODE_OAUTH_TOKEN "$t"; ok "Đã lưu OAuth token."
-      else warn "Bỏ trống - bỏ qua."; fi
+      else
+        ok "Hoàn tất. Nếu setup-token đã đăng nhập thành công, 'claude' dùng được luôn."
+      fi
       ;;
     apikey)
       local k; k="$(ui_input "Dán ANTHROPIC_API_KEY (sk-ant-...):" "")" || return 0
@@ -55,6 +65,26 @@ _claude_auth_prompt() {
       ;;
     *) info "Bỏ qua auth. Đăng nhập sau: set ANTHROPIC_API_KEY hoặc CLAUDE_CODE_OAUTH_TOKEN.";;
   esac
+}
+
+# Gỡ Claude Code: binary + (tuỳ chọn) cấu hình/token. Giữ lại dòng PATH .local/bin
+# trong .bashrc vì có thể tool khác đang dùng; chỉ gỡ phần auth do lat thêm.
+_claude_uninstall() {
+  require_root
+  ui_yesno "Gỡ Claude Code khỏi VPS này?\n(Xoá binary + phần đăng nhập do lat thêm)" || return 0
+  _claude_ensure_path
+  "$CLAUDE_BIN" uninstall >/dev/null 2>&1 && info "Đã chạy 'claude uninstall'." || true
+  rm -f "$CLAUDE_BIN"
+  rm -rf /root/.local/share/claude 2>/dev/null || true
+  # gỡ phần auth lat thêm vào .bashrc + xoá env file
+  rm -f "$CLAUDE_ENV_FILE"
+  sed -i '/# Claude Code auth (lat)/d' "$CLAUDE_BASHRC" 2>/dev/null || true
+  sed -i '\#claude-env#d' "$CLAUDE_BASHRC" 2>/dev/null || true
+  if ui_yesno "Xoá luôn cấu hình + token đăng nhập của Claude (~/.claude, ~/.config/claude)?"; then
+    rm -rf /root/.claude /root/.config/claude 2>/dev/null || true
+    ok "Đã xoá cả cấu hình/token đăng nhập."
+  fi
+  ui_msg "Đã gỡ Claude Code.\n(Mở SSH mới để PATH/biến môi trường cập nhật.)"
 }
 
 act_install_claude() {
@@ -68,11 +98,13 @@ act_install_claude() {
       update    "Cập nhật (claude update)" \
       auth      "Đổi/đặt API key hoặc OAuth token" \
       reinstall "Cài lại" \
+      uninstall "Gỡ cài đặt Claude Code" \
       back      "Quay lại")" || return 0
     case "$c" in
       update)    _claude_ensure_path; "$CLAUDE_BIN" update 2>&1 | tail -5 || true; ui_msg "Đã chạy cập nhật Claude Code."; return 0;;
       auth)      _claude_auth_prompt; return 0;;
       reinstall) ;;  # rơi xuống phần cài
+      uninstall) _claude_uninstall; return 0;;
       *)         return 0;;
     esac
   fi
