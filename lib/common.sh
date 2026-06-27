@@ -220,6 +220,24 @@ ssl_remove_origin() {
   rm -f "${PROXY_CERTS}/${domain}.crt" "${PROXY_CERTS}/${domain}.key"
 }
 
+# Tạo cert TỰ KÝ cho domain + www (dùng khi giữ Cloudflare proxy cam, đặt SSL/TLS = Full).
+# Cloudflare "Full" chấp nhận cert tự ký -> không cần Origin Cert, không cần dán gì.
+# Origin vẫn phục vụ 443 (proto đúng, tránh redirect loop của chế độ Flexible/HTTP).
+ssl_make_selfsigned() {
+  local domain="$1"
+  mkdir -p "$PROXY_CERTS"; chmod 700 "$PROXY_CERTS" 2>/dev/null || true
+  local crt="${PROXY_CERTS}/${domain}.crt" key="${PROXY_CERTS}/${domain}.key"
+  openssl req -x509 -nodes -newkey rsa:2048 -days 3650 \
+    -keyout "$key" -out "$crt" \
+    -subj "/CN=${domain}" \
+    -addext "subjectAltName=DNS:${domain},DNS:www.${domain}" >/dev/null 2>&1 || return 1
+  chmod 600 "$crt" "$key"
+  # nginx-proxy khớp cert theo tên host -> tạo bản cho www trỏ cùng cert/key.
+  cp -f "$crt" "${PROXY_CERTS}/www.${domain}.crt"
+  cp -f "$key" "${PROXY_CERTS}/www.${domain}.key"
+  chmod 600 "${PROXY_CERTS}/www.${domain}.crt" "${PROXY_CERTS}/www.${domain}.key"
+}
+
 # Sửa quyền wp-content để WordPress cài/sửa/xoá plugin+theme + upload media (không đòi FTP).
 # Chạy chown TRONG container php (đúng uid www-data của image).
 fix_perms() {

@@ -56,8 +56,9 @@ act_site_add() {
   # --- Bước 3: SSL ---
   if [ -z "$ssl" ]; then
     ssl="$(ui_menu "Chứng chỉ HTTPS cho ${domain}" \
-      auto   "Auto Let's Encrypt (domain trỏ thẳng / Cloudflare DNS-only)" \
-      origin "Cloudflare Origin Cert (bật proxy cam + SSL Full strict)")" || return 1
+      cloudflare "Cloudflare proxy CAM - tự tạo cert (đặt SSL/TLS = Full) [dễ nhất]" \
+      auto       "Let's Encrypt (domain trỏ thẳng / Cloudflare DNS-only màu xám)" \
+      origin     "Cloudflare Origin Cert (dán cert, SSL/TLS = Full strict)")" || return 1
   fi
 
   local cert="" key=""
@@ -105,10 +106,12 @@ act_site_add() {
   } > "$dir/.env"
   chmod 600 "$dir/.env"
 
-  # origin cert -> /opt/proxy/certs (cho cả apex + www)
+  # cert -> /opt/proxy/certs (cho cả apex + www)
   if [ "$ssl" = "origin" ]; then
     ssl_save_origin "$domain" "$cert" "$key"
     ssl_save_origin "www.${domain}" "$cert" "$key"
+  elif [ "$ssl" = "cloudflare" ]; then
+    ssl_make_selfsigned "$domain" || { warn "Tạo cert tự ký lỗi (thiếu openssl?)."; _add_rollback; return 1; }
   fi
 
   # site.conf
@@ -185,6 +188,7 @@ act_site_add() {
 
   local ssl_note="Cert Let's Encrypt sẽ tự cấp khi domain trỏ về VPS."
   [ "$ssl" = "origin" ] && ssl_note="Đã dùng Cloudflare Origin Cert. Bật proxy (cam) + SSL/TLS = Full (strict)."
+  [ "$ssl" = "cloudflare" ] && ssl_note="Đã tạo cert tự ký. Bật Cloudflare proxy (CAM) + đặt SSL/TLS = Full (KHÔNG phải strict)."
 
   ui_msg "Site đã sẵn sàng: https://${domain}\n\nWP Admin : https://${domain}/wp-admin\nUser     : ${admin_user}\nPassword : ${admin_pass}\nLoại     : ${type}\nSSL      : ${ssl}\nThư mục  : ${dir}\n\n>> Trỏ A record '${domain}' (và www) về IP VPS này.\n>> ${ssl_note}\n>> Lưu lại mật khẩu trên (sẽ không hiện lại)."
 }
