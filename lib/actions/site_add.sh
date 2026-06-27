@@ -143,6 +143,9 @@ act_site_add() {
     mkdir -p "$dir/wp-content/plugins" "$dir/wp-content/themes"
     rsync -a "${WPF_ROOT}/payload/plugins/" "$dir/wp-content/plugins/" || { _add_rollback; return 1; }
     rsync -a "${WPF_ROOT}/payload/themes/"  "$dir/wp-content/themes/"  || { _add_rollback; return 1; }
+    # Child theme (giống demo) - ship kèm repo trong assets/, không gated.
+    cp -a "${WPF_ROOT}/assets/themes/affiliateCMS-Child" "$dir/wp-content/themes/" 2>/dev/null \
+      || warn "Không copy được child theme (assets/themes/affiliateCMS-Child)."
   fi
 
   info "Khởi động container (nginx + php-fpm + mariadb + redis)..."
@@ -164,6 +167,9 @@ act_site_add() {
       --admin_email="$email" --skip-email || { _add_rollback; return 1; }
   fi
   wp_run "$id" rewrite structure '/%postname%/' >/dev/null 2>&1 || true
+  # Mặc định CHẶN search engine index -> tránh trùng lặp nội dung giữa các site học viên
+  # (nội dung/cấu hình giống demo). Khi site chạy thật: Settings > Reading, bỏ tick Discourage.
+  wp_run "$id" option update blog_public 0 >/dev/null 2>&1 || true
 
   if [ "$type" = "affiliatecms" ]; then
     # Plugin PHỤ THUỘC (giống demo iflmmo): Rank Math (AffiliateCMS tích hợp SEO/schema sâu) +
@@ -171,8 +177,16 @@ act_site_add() {
     info "Cài plugin phụ thuộc (Rank Math SEO + Classic Editor)..."
     wp_run "$id" plugin install seo-by-rank-math classic-editor --activate >/dev/null 2>&1 \
       || warn "Cài Rank Math/Classic Editor lỗi (kiểm mạng) - vào wp-admin cài tay: seo-by-rank-math, classic-editor."
-    info "Kích hoạt theme + plugin AffiliateCMS..."
-    wp_run "$id" theme activate affiliateCMS-theme >/dev/null 2>&1 || warn "Chưa activate được theme."
+    info "Kích hoạt theme CON (giống demo) + plugin AffiliateCMS..."
+    wp_run "$id" theme activate affiliateCMS-Child >/dev/null 2>&1 \
+      || wp_run "$id" theme activate affiliateCMS-theme >/dev/null 2>&1 \
+      || warn "Chưa activate được theme."
+    # Xoá theme mặc định của WordPress core. Giữ lại cha affiliateCMS-theme (child cần kế thừa).
+    local _t
+    for _t in $(wp_run "$id" theme list --status=inactive --field=name 2>/dev/null); do
+      [ "$_t" = "affiliateCMS-theme" ] && continue
+      wp_run "$id" theme delete "$_t" >/dev/null 2>&1 || true
+    done
     wp_run "$id" plugin activate affiliatecms-pro affiliatecms-ai >/dev/null 2>&1 || warn "Chưa activate được plugin."
     # Import config giống demo (Rank Math + settings + templates), đã strip license/API/affiliate_tag.
     info "Import cấu hình giống demo..."
@@ -192,5 +206,5 @@ act_site_add() {
   [ "$ssl" = "origin" ] && ssl_note="Đã dùng Cloudflare Origin Cert. Bật proxy (cam) + SSL/TLS = Full (strict)."
   [ "$ssl" = "cloudflare" ] && ssl_note="Đã tạo cert tự ký. Bật Cloudflare proxy (CAM) + đặt SSL/TLS = Full (KHÔNG phải strict)."
 
-  ui_msg "Site đã sẵn sàng: https://${domain}\n\nWP Admin : https://${domain}/wp-admin\nUser     : ${admin_user}\nPassword : ${admin_pass}\nLoại     : ${type}\nSSL      : ${ssl}\nThư mục  : ${SITES_ROOT}/${domain}  (-> ${dir})\n\n>> Trỏ A record '${domain}' (và www) về IP VPS này.\n>> ${ssl_note}\n>> Lưu lại mật khẩu trên (sẽ không hiện lại)."
+  ui_msg "Site đã sẵn sàng: https://${domain}\n\nWP Admin : https://${domain}/wp-admin\nUser     : ${admin_user}\nPassword : ${admin_pass}\nLoại     : ${type}\nSSL      : ${ssl}\nThư mục  : ${SITES_ROOT}/${domain}  (-> ${dir})\n\n>> Trỏ A record '${domain}' (và www) về IP VPS này.\n>> ${ssl_note}\n>> Search engine: ĐANG CHẶN index (chống trùng lặp). Khi chạy thật: Settings > Reading, bỏ tick 'Discourage search engines'.\n>> Lưu lại mật khẩu trên (sẽ không hiện lại)."
 }

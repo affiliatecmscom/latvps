@@ -1,0 +1,363 @@
+/**
+ * AffiliateCMS Child - Theme Settings Admin
+ */
+
+/* Card styling */
+.acmsc-card {
+    background: #fff;
+    border: 1px solid #c3c4c7;
+    border-radius: 4px;
+    padding: 20px 24px;
+    margin-top: 16px;
+}
+
+.acmsc-card h2 {
+    margin-top: 0;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 14px;
+}
+
+.acmsc-card h2 .dashicons {
+    color: #2271b1;
+}
+
+/* Hook position tag */
+.acmsc-hook-tag {
+    font-size: 11px;
+    background: #f0f0f1;
+    color: #50575e;
+    padding: 2px 8px;
+    border-radius: 3px;
+    font-weight: normal;
+    margin-left: auto;
+}
+
+/* Description spacing */
+.acmsc-card .description {
+    margin-bottom: 12px;
+    color: #646970;
+}
+
+/* Submit button spacing */
+.acmsc-tab-content + p.submit {
+    margin-top: 8px;
+}
+
+/* ==========================================================================
+   Display Settings - Mode Options
+   ========================================================================== */
+
+.acmsc-mode-options {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.acmsc-mode-option {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 14px 16px;
+    border: 2px solid #dcdcde;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    background: #f9f9f9;
+}
+
+.acmsc-mode-option:hover {
+    border-color: #2271b1;
+    background: #f0f6fc;
+}
+
+.acmsc-mode-option--active,
+.acmsc-mode-option:has(input:checked) {
+    border-color: #2271b1;
+    background: #f0f6fc;
+    box-shadow: 0 0 0 1px #2271b1;
+}
+
+.acmsc-mode-option input[type="radio"] {
+    margin-top: 3px;
+    flex-shrink: 0;
+}
+
+.acmsc-mode-option__icon {
+    color: #2271b1;
+    font-size: 20px;
+    line-height: 1;
+    flex-shrink: 0;
+    margin-top: 1px;
+}
+
+.acmsc-mode-option__content {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.acmsc-mode-option__content strong {
+    font-size: 14px;
+    color: #1d2327;
+}
+
+.acmsc-mode-option__content span {
+    font-size: 12px;
+    color: #646970;
+    line-height: 1.4;
+}
+
+/* Time-based settings panel */
+.acmsc-time-settings {
+    margin-top: 16px;
+    padding: 16px 20px;
+    background: #f6f7f7;
+    border: 1px solid #dcdcde;
+    border-radius: 6px;
+}
+
+.acmsc-time-settings h3 {
+    margin: 0 0 8px;
+    font-size: 13px;
+}
+
+.acmsc-time-fields {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 12px;
+}
+
+.acmsc-time-fields label {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 13px;
+    font-weight: 500;
+    color: #1d2327;
+}
+
+.acmsc-time-fields input[type="time"] {
+    padding: 6px 10px;
+    border: 1px solid #8c8f94;
+    border-radius: 4px;
+    font-size: 14px;
+    width: 140px;
+}
+
+.acmsc-time-arrow {
+    color: #646970;
+    margin-top: 18px;
+}
+
+/* ==========================================================================
+   CodeMirror Dark Theme (Monokai-inspired)
+   ========================================================================== */
+
+.acmsc-tab-content .CodeMirror {
+    border: 1px solid #3c3f41;
+    border-radius: 4px;
+    min-height: 200px;
+    font-size: 13px;
+    line-height: 1.6;
+    font-family: 'JetBrains Mono', 'Fira Code', 'SF Mono', 'Consolas', 'Monaco', monospace;
+
+    /* Dark background */
+    background: #1e1e2e;
+    color: #cdd6f4;
+}
+
+/* Taller editor for Custom CSS */
+#tab-custom-css .CodeMirror {
+    min-height: 450px;
+}
+
+/* Gutters (line numbers area) */
+.acmsc-tab-content .CodeMirror-gutters {
+    background: #181825;
+    border-right: 1px solid #313244;
+}
+
+.acmsc-tab-content .CodeMirror-linenumber {
+    color: #585b70;
+    padding: 0 8px 0 4px;
+}
+
+/* Active line */
+.acmsc-tab-content .CodeMirror-activeline-background {
+    background: #262637 !important;
+}
+
+/* Cursor */
+.acmsc-tab-content .CodeMirror-cursor {
+    border-left: 2px solid #f5e0dc;
+}
+
+/* Selection */
+.acmsc-tab-content .CodeMirror-selected,
+.acmsc-tab-content .CodeMirror-focused .CodeMirror-selected {
+    background: #45475a !important;
+}
+
+/* Matching brackets */
+.acmsc-tab-content .CodeMirror-matchingbracket {
+    color: #a6e3a1 !important;
+    background: rgba(166, 227, 161, 0.15);
+    font-weight: bold;
+}
+
+/* Scrollbar */
+.acmsc-tab-content .CodeMirror-simplescroll-horizontal div,
+.acmsc-tab-content .CodeMirror-simplescroll-vertical div {
+    background: #45475a;
+    border-radius: 4px;
+}
+
+/* ---- Syntax Colors (CSS mode) ---- */
+
+/* Properties: color, margin, display, etc. */
+.acmsc-tab-content .cm-property {
+    color: #89b4fa;
+}
+
+/* Values: red, 10px, bold, etc. */
+.acmsc-tab-content .cm-atom {
+    color: #fab387;
+}
+
+/* Numbers: 10, 1.5, etc. */
+.acmsc-tab-content .cm-number {
+    color: #fab387;
+}
+
+/* Units: px, em, rem, %, etc. */
+.acmsc-tab-content .cm-unit {
+    color: #f9e2af;
+}
+
+/* Strings */
+.acmsc-tab-content .cm-string {
+    color: #a6e3a1;
+}
+
+/* Strings (double-quoted) */
+.acmsc-tab-content .cm-string-2 {
+    color: #a6e3a1;
+}
+
+/* Keywords: !important, and, or, from, to */
+.acmsc-tab-content .cm-keyword {
+    color: #cba6f7;
+}
+
+/* Selectors: tags (div, p, h1) */
+.acmsc-tab-content .cm-tag {
+    color: #f38ba8;
+}
+
+/* Selectors: .class */
+.acmsc-tab-content .cm-qualifier {
+    color: #a6e3a1;
+}
+
+/* Selectors: #id */
+.acmsc-tab-content .cm-builtin {
+    color: #fab387;
+}
+
+/* Pseudo-classes/elements: :hover, ::before */
+.acmsc-tab-content .cm-variable-2 {
+    color: #89dceb;
+}
+
+.acmsc-tab-content .cm-variable-3,
+.acmsc-tab-content .cm-type {
+    color: #f9e2af;
+}
+
+/* Comments */
+.acmsc-tab-content .cm-comment {
+    color: #6c7086;
+    font-style: italic;
+}
+
+/* @media, @keyframes, @import */
+.acmsc-tab-content .cm-def {
+    color: #89dceb;
+}
+
+/* Brackets, braces, semicolons */
+.acmsc-tab-content .cm-bracket {
+    color: #bac2de;
+}
+
+.acmsc-tab-content .cm-operator {
+    color: #89dceb;
+}
+
+/* Error */
+.acmsc-tab-content .cm-error {
+    color: #f38ba8;
+    text-decoration: underline wavy;
+}
+
+/* Variables (CSS custom properties) */
+.acmsc-tab-content .cm-variable {
+    color: #cdd6f4;
+}
+
+/* ---- Syntax Colors (HTML mode) ---- */
+
+/* HTML tags */
+.acmsc-tab-content .cm-meta {
+    color: #6c7086;
+}
+
+/* HTML attributes */
+.acmsc-tab-content .cm-attribute {
+    color: #f9e2af;
+}
+
+/* Link color in gutters */
+.acmsc-tab-content .cm-link {
+    color: #89b4fa;
+}
+
+/* ---- Lint markers ---- */
+
+.acmsc-tab-content .CodeMirror-lint-marker-error {
+    background-color: #f38ba8;
+}
+
+.acmsc-tab-content .CodeMirror-lint-marker-warning {
+    background-color: #f9e2af;
+}
+
+.acmsc-tab-content .CodeMirror-lint-tooltip {
+    background: #1e1e2e;
+    border: 1px solid #45475a;
+    color: #cdd6f4;
+    border-radius: 4px;
+}
+
+/* ---- Autocomplete hints ---- */
+
+.acmsc-tab-content .CodeMirror-hints {
+    background: #1e1e2e;
+    border: 1px solid #45475a;
+    border-radius: 4px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+.acmsc-tab-content .CodeMirror-hint {
+    color: #cdd6f4;
+    padding: 4px 8px;
+}
+
+.acmsc-tab-content .CodeMirror-hint-active {
+    background: #45475a;
+    color: #cdd6f4;
+}
