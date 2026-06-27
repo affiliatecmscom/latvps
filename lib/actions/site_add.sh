@@ -215,10 +215,18 @@ act_site_add() {
     info "Áp cấu hình AffiliateCMS (đã strip secret)..."
     acms_import_config "$id"
 
-    # License (đặt SAU clone vì clone đã xoá option license của demo).
+    # License: gọi ĐÚNG hàm activate của plugin (LicenseGuard::activate) -> set acms_license_key +
+    # acms_license_status=active + acms_activated_domain + ai_enabled (có verify chữ ký server).
+    # Chỉ update_option key là KHÔNG đủ -> plugin vẫn báo "chưa có license" (gate theo status local).
     if [ -n "$license" ]; then
-      wp_run "$id" option update acms_license_key "$license" >/dev/null 2>&1 || true
-      license_activate "$license" "$domain" && ok "License đã activate." || warn "Activate license thất bại - xử lý sau trong wp-admin."
+      info "Kích hoạt license qua plugin..."
+      local _lcode _lr
+      _lcode='$g=new \AffiliateCMS\Pro\Core\LicenseGuard(); $r=$g->activate("'"$license"'"); echo (!empty($r["success"]))?"OK":("FAIL:".($r["message"]??($r["error"]??"")));'
+      _lr="$(wp_run "$id" eval "$_lcode" 2>/dev/null)"
+      case "$_lr" in
+        OK*) ok "License đã kích hoạt." ;;
+        *)   warn "Kích hoạt license chưa xong: ${_lr:-không phản hồi}. Vào wp-admin > AffiliateCMS > License để kích hoạt lại." ;;
+      esac
     else
       warn "Chưa có license - activate sau trong wp-admin."
     fi
