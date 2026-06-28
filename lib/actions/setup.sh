@@ -13,12 +13,19 @@ act_setup() {
   apt-get install -y -qq ca-certificates curl gnupg openssl ufw rsync unzip git cron >/dev/null
   systemctl enable --now cron >/dev/null 2>&1 || true
 
-  # 1.5 Swap - RAM < ~2GB thì tạo swap 2GB để giảm OOM (VPS nhỏ chạy MariaDB/PHP/Docker).
+  # Vá toàn bộ gói hệ thống NGAY (đóng lỗ hổng đã biết: kernel/libc6/openssl...).
+  # --force-confold: giữ file cấu hình cũ -> không bị hỏi tương tác (chạy không giám sát).
+  info "Vá toàn bộ gói hệ thống (apt upgrade) - có thể mất vài phút..."
+  apt-get upgrade -y -qq -o Dpkg::Options::=--force-confold >/dev/null 2>&1 \
+    && ok "Đã vá toàn bộ gói (không còn backlog)." || warn "apt upgrade gặp lỗi (bỏ qua, chạy lại sau)."
+
+  # 1.5 Swap - tạo swap 2GB làm "van an toàn" chống OOM cho MỌI máy chưa có swap
+  # (kể cả RAM lớn: chạy nhiều site x 4 container nên tải cao vẫn có thể OOM).
   local mem_mb swap_mb
   mem_mb="$(free -m 2>/dev/null | awk '/^Mem:/{print $2}')"
   swap_mb="$(free -m 2>/dev/null | awk '/^Swap:/{print $2}')"
-  if [ "${mem_mb:-9999}" -lt 1900 ] && [ "${swap_mb:-0}" -lt 1024 ] && [ ! -f /swapfile ]; then
-    info "RAM ${mem_mb}MB (<2GB) - tạo swap 2GB giảm OOM..."
+  if [ "${swap_mb:-0}" -lt 1024 ] && [ ! -f /swapfile ]; then
+    info "Chưa có swap (RAM ${mem_mb}MB) - tạo swap 2GB chống OOM..."
     fallocate -l 2G /swapfile 2>/dev/null || dd if=/dev/zero of=/swapfile bs=1M count=2048 status=none 2>/dev/null
     chmod 600 /swapfile
     mkswap /swapfile >/dev/null 2>&1 && swapon /swapfile 2>/dev/null \
@@ -26,7 +33,7 @@ act_setup() {
       || warn "Tạo swap không thành (bỏ qua)."
     sysctl -w vm.swappiness=10 >/dev/null 2>&1 || true
     grep -q '^vm.swappiness' /etc/sysctl.conf 2>/dev/null || echo 'vm.swappiness=10' >> /etc/sysctl.conf
-  elif [ -f /swapfile ] || [ "${swap_mb:-0}" -ge 1024 ]; then
+  else
     ok "Đã có swap."
   fi
 
@@ -89,8 +96,16 @@ F2B
 APT::Periodic::Update-Package-Lists "1";
 APT::Periodic::Unattended-Upgrade "1";
 AUU
+  # Tự khởi động lại CHỈ KHI bản vá yêu cầu (vd kernel/libc6) - lúc 3h30 sáng, kể cả đang có
+  # phiên SSH. Container site dùng restart: unless-stopped nên tự bật lại sau reboot.
+  cat > /etc/apt/apt.conf.d/52latvps-unattended <<'UUL'
+Unattended-Upgrade::Automatic-Reboot "true";
+Unattended-Upgrade::Automatic-Reboot-WithUsers "true";
+Unattended-Upgrade::Automatic-Reboot-Time "03:30";
+Unattended-Upgrade::Remove-Unused-Dependencies "true";
+UUL
   systemctl enable --now unattended-upgrades >/dev/null 2>&1 || true
-  ok "fail2ban + tự vá bảo mật OS đã bật."
+  ok "fail2ban + tự vá bảo mật OS (tự reboot 3h30 khi cần) đã bật."
 
   # 3.6 SSH key-only (TUỲ CHỌN, chỉ khi đã có SSH key -> tránh tự khoá mình ra)
   if [ -s /root/.ssh/authorized_keys ]; then
