@@ -1,6 +1,8 @@
 # Stack WordPress cô lập - sinh bởi lat. Site __DOMAIN__ (id __ID__).
 # 4 container: web(nginx) + php(wordpress:fpm) + db(mariadb) + redis. Chỉ web join latvps_proxy.
 # Giá trị ${...} đọc từ .env của site (docker compose interpolate). VIRTUAL_HOST/LE_* để nginx-proxy + acme-companion.
+# BẢO MẬT: TUYỆT ĐỐI KHÔNG thêm 'ports:' cho db/redis/php - chúng chỉ ở network 'internal'
+# (db/redis không bao giờ lộ ra host/internet). lat tự kiểm tra điều này sau khi tạo site.
 name: site-__ID__
 
 services:

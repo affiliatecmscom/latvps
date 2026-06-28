@@ -19,23 +19,28 @@ _cron_write_block() {
   crontab "$tmp"; rm -f "$tmp"
 }
 
-# Tự cài 6 cron AffiliateCMS cho 1 site.
-_cron_install_site() {
-  local id; id="$(_cron_pick_site)" || return 0
-  [ -n "$id" ] || return 0
-  local domain type; domain="$(site_get "$id" DOMAIN)"; type="$(site_get "$id" TYPE)"
-  if [ "$type" != "affiliatecms" ]; then
-    ui_yesno "Site ${domain} không phải AffiliateCMS - cron này chỉ hợp cho AffiliateCMS. Vẫn cài?" || return 0
-  fi
+# Cài 6 cron AffiliateCMS cho 1 site theo ID (KHÔNG hỏi, KHÔNG popup) - dùng cho cả luồng
+# lat add (tự động) lẫn menu. Tự SINH token nếu site chưa có (bundle demo strip token bí mật ->
+# fresh/clone đều không có sẵn). Trả 0 nếu cài xong.
+cron_install_for_site() {
+  local id="$1"
+  local domain; domain="$(site_get "$id" DOMAIN)"
+  [ -n "$domain" ] || return 1
+  need_cmd crontab || return 1
 
-  info "Lấy token cron của site..."
   local token key
+  # PRO: X-ACMS-Token = option acms_api_token. AI: cron_key = option acms_ai_cron_key.
+  # Đọc trước (nếu plugin tự sinh lúc kích hoạt thì dùng của plugin); rỗng thì tự sinh + lưu.
   token="$(wp_run "$id" option get acms_api_token 2>/dev/null | tr -d '[:space:]')"
   if [ -z "$token" ]; then
     token="$(wp_run "$id" eval 'echo wp_generate_password(32,false);' 2>/dev/null | tr -d '[:space:]')"
     wp_run "$id" option update acms_api_token "$token" >/dev/null 2>&1 || true
   fi
   key="$(wp_run "$id" option get acms_ai_cron_key 2>/dev/null | tr -d '[:space:]')"
+  if [ -z "$key" ]; then
+    key="$(wp_run "$id" eval 'echo wp_generate_password(32,false);' 2>/dev/null | tr -d '[:space:]')"
+    wp_run "$id" option update acms_ai_cron_key "$key" >/dev/null 2>&1 || true
+  fi
 
   local c="curl -sk -X POST --resolve ${domain}:443:127.0.0.1"
   local base="https://${domain}/wp-json"
@@ -52,6 +57,19 @@ _cron_install_site() {
 EOF
 )"
   _cron_write_block "$id" "$block"
+  return 0
+}
+
+# (menu) Tự cài 6 cron AffiliateCMS cho 1 site (chọn site + popup kết quả).
+_cron_install_site() {
+  local id; id="$(_cron_pick_site)" || return 0
+  [ -n "$id" ] || return 0
+  local domain type; domain="$(site_get "$id" DOMAIN)"; type="$(site_get "$id" TYPE)"
+  if [ "$type" != "affiliatecms" ]; then
+    ui_yesno "Site ${domain} không phải AffiliateCMS - cron này chỉ hợp cho AffiliateCMS. Vẫn cài?" || return 0
+  fi
+  info "Cài cron + lấy/sinh token của site..."
+  cron_install_for_site "$id" || { ui_msg "Cài cron lỗi (thiếu cron hoặc site chưa sẵn sàng)."; return 0; }
   ok "Đã cài 6 cronjob AffiliateCMS cho ${domain}."
   ui_msg "Đã cài cron tự động cho ${domain}:\n- PRO: scrape / process-scheduled / process-queue (5 phút)\n- AI: scan (5p) / work (2p) / process (5p)\n\nXem: lat cron -> Xem crontab. Gỡ: lat cron -> Xoá cron của site."
 }

@@ -160,6 +160,9 @@ act_site_add() {
   docker compose -f "$dir/docker-compose.yml" --env-file "$dir/.env" up -d || { _add_rollback; return 1; }
   wait_for_db "$db" "$db_password" || { _add_rollback; return 1; }
 
+  # BẢO MẬT: bảo đảm DB/Redis (và php) KHÔNG publish cổng ra host - chỉ network internal.
+  assert_ports_private "$id" || warn "Hãy kiểm tra docker-compose.yml của site (không được có 'ports:' cho db/redis)."
+
   docker cp "${WPF_ROOT}/bin/wp-cli.phar" "${php}:/usr/local/bin/wp-cli.phar" >/dev/null 2>&1
 
   info "Chờ WordPress core..."
@@ -233,6 +236,26 @@ act_site_add() {
     else
       warn "Chưa có license - activate sau trong wp-admin."
     fi
+
+    # Tự cài cron tự động hoá AffiliateCMS (scrape/process/AI) - học viên KHÔNG phải vào lat cron.
+    # cron_install_for_site tự sinh acms_api_token + acms_ai_cron_key nếu site chưa có
+    # (bundle demo đã strip token bí mật -> fresh lẫn clone đều chưa có).
+    if need_cmd crontab; then
+      info "Cài cron tự động hoá AffiliateCMS..."
+      cron_install_for_site "$id" \
+        && ok "Đã cài cron tự động (PRO scrape/process 5p, AI work 2p/process 5p)." \
+        || warn "Cài cron chưa xong - có thể cài sau bằng: lat cron."
+    fi
+  fi
+
+  # Bật Redis object cache (giảm tải DB lúc tải cao). wp-config đã set sẵn WP_REDIS_HOST/PORT/PASSWORD.
+  # Áp cho CẢ affiliatecms lẫn vanilla; với affiliatecms làm SAU clone để dump demo không đè active_plugins.
+  info "Bật Redis object cache..."
+  if wp_run "$id" plugin install redis-cache --activate >/dev/null 2>&1 \
+     && wp_run "$id" redis enable >/dev/null 2>&1; then
+    ok "Redis object cache đã bật."
+  else
+    warn "Bật Redis object cache chưa xong (bật sau trong wp-admin > Settings > Redis)."
   fi
 
   # quyền để cài/sửa/xoá plugin+theme + upload media từ wp-admin (không đòi FTP)

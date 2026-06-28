@@ -268,6 +268,23 @@ fix_perms() {
   docker exec "${id}_php" chown -R www-data:www-data /var/www/html/wp-content 2>/dev/null || true
 }
 
+# BẢO ĐẢM db + redis (và php) KHÔNG publish cổng ra host - chỉ trong network internal.
+# Defense-in-depth: dù template không có 'ports:', vẫn kiểm tra runtime để chặn trường hợp
+# template/compose bị sửa nhầm thêm publish cổng (lộ MariaDB/Redis ra internet). Trả 1 nếu phát hiện.
+assert_ports_private() {
+  local id="$1" svc pub bad=""
+  for svc in db redis php; do
+    pub="$(docker port "${id}_${svc}" 2>/dev/null | tr -d '[:space:]')"
+    [ -n "$pub" ] && bad="${bad} ${svc}:[$(docker port "${id}_${svc}" 2>/dev/null | tr '\n' ' ')]"
+  done
+  if [ -n "$bad" ]; then
+    warn "BẢO MẬT: site ${id} đang PUBLISH cổng nội bộ ra host:${bad}"
+    warn "MariaDB/Redis phải ở network internal, KHÔNG được mở ra ngoài. Kiểm tra docker-compose.yml."
+    return 1
+  fi
+  return 0
+}
+
 # Import config AffiliateCMS + Rank Math (giống demo) vào site. Bundle đã strip license/API/secret.
 # Dùng wp eval + update_option (serialize đúng). Chỉ áp cho site affiliatecms.
 acms_import_config() {
