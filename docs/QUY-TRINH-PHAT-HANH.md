@@ -127,6 +127,42 @@ Bỏ `lat payload-sync` là `lat add` dùng lại plugin cũ trong cache, dù đ
 Site đã chạy sẵn thì không cần làm gì: plugin tự hiện thông báo update trong wp-admin
 (qua `update/check`), học viên bấm update như plugin WordPress bình thường.
 
+## 6.1. Site "vỡ giao diện" / nghi bị cache -> ĐỪNG tin ngay là cache
+
+Bug `umask` (đã vá ở lat 3.17.1) có triệu chứng **giống hệt cache hỏng**: trang vẫn load,
+HTML render, wp-admin vào được, nhưng **CSS/JS trả 404** nên giao diện vỡ và admin plugin
+không boot. Nguyên nhân: thư mục `0700` do php-fpm (uid 82) tạo, còn nginx chạy uid 101 nên
+không traverse được. Xoá cache KHÔNG bao giờ sửa được, file vẫn nằm đúng chỗ trên đĩa.
+
+Phân định trong 5 giây:
+```bash
+lat version
+curl -sI https://<domain>/wp-content/themes/affiliateCMS-theme/style.css | head -1
+ls -ld /opt/sites/<domain>/wp-content/themes/affiliateCMS-theme
+```
+- style.css **404** hoặc thư mục **700** -> **không phải cache**, là bug quyền.
+- `lat version` = **3.17.0** -> chưa có bản vá (cài lại trước khi `lat update` là dính).
+- style.css **200** + thư mục **755** -> lúc đó mới thật sự là cache.
+
+Chữa tại chỗ, không cần cài lại site (`<id>` lấy từ `lat ls`):
+```bash
+lat update && lat update
+lat payload-sync
+docker exec <id>_php find /var/www/html/wp-content -type d -exec chmod 755 {} +
+docker exec <id>_php find /var/www/html/wp-content -type f -exec chmod 644 {} +
+```
+
+## 6.2. ĐỪNG xoá Telemetry.php
+
+`src/Core/Telemetry.php` (có ở **cả** `affiliatecms-pro` lẫn `affiliatecms-ai`) trông như
+telemetry nhưng **là kênh license + công tắc tắt từ xa**: cùng một request vừa gửi beacon
+`/hs` vừa **nhận cờ điều khiển về** (`force_disable`, `blacklisted`/`suspended`/`revoked`
+-> tắt AI / `acms_force_disable`), kèm `detectClone()`.
+
+Xoá nó = **mất vĩnh viễn khả năng tắt AI trên site bị crack, hết hạn hoặc bị thu hồi license**.
+Bản telemetry chết trong `Bootstrap::performSystemCheck` đã được gỡ ở PRO 1.7.18; đó là thứ
+khác, một chiều, và không liên quan tới `Telemetry.php`.
+
 ## 7. Checklist rút gọn
 
 - [ ] Bump `Version:` + hằng số VERSION + CHANGELOG
