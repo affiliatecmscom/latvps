@@ -59,15 +59,42 @@ cron_install_for_site() {
 
   local c="curl -sk -X POST --resolve ${domain}:443:127.0.0.1"
   local base="https://${domain}/wp-json"
+
+  # cron_key qua HEADER thay vì query string: query bị nginx ghi NGUYÊN VĂN vào access log
+  # (cả nginx của site lẫn proxy chung) -> key nằm phơi trong log, backup, ảnh chụp gửi hỗ trợ.
+  # Ai có key là POST /cron/work được -> đốt sạch budget AI của học viên.
+  # Plugin AI chỉ đọc header từ 1.3.23; bản cũ chỉ hiểu query -> phải dò version, nếu không
+  # cron sẽ 403 âm thầm và automation chết mà không ai biết (site vẫn chạy bình thường).
+  local ai_ver ai_auth
+  ai_ver="$(wp_run "$id" plugin get affiliatecms-ai --field=version 2>/dev/null | tr -d '[:space:]')"
+  if [ -n "$ai_ver" ] && ! version_gt "1.3.23" "$ai_ver"; then
+    ai_auth="header"
+  else
+    ai_auth="query"
+    warn "Plugin AI ${ai_ver:-<không đọc được>} chưa hỗ trợ cron_key qua header (cần 1.3.23+)."
+    warn "Tạm dùng query string - key sẽ nằm trong access log. Update plugin rồi chạy lại: lat cron."
+  fi
+
+  local ai_scan ai_work ai_process
+  if [ "$ai_auth" = "header" ]; then
+    ai_scan="${c} \"${base}/acms-ai/v1/cron/scan\" -H \"X-ACMS-Cron-Key: ${key}\""
+    ai_work="${c} \"${base}/acms-ai/v1/cron/work\" -H \"X-ACMS-Cron-Key: ${key}\""
+    ai_process="${c} \"${base}/acms-ai/v1/cron/process\" -H \"X-ACMS-Cron-Key: ${key}\""
+  else
+    ai_scan="${c} \"${base}/acms-ai/v1/cron/scan?cron_key=${key}\""
+    ai_work="${c} \"${base}/acms-ai/v1/cron/work?cron_key=${key}\""
+    ai_process="${c} \"${base}/acms-ai/v1/cron/process?cron_key=${key}\""
+  fi
+
   local block
   block="$(cat <<EOF
 # >>> latvps ${id} >>>  (AffiliateCMS cron - ${domain})
 */5 * * * * ${c} "${base}/acms/v1/automation/scrape" -H "X-ACMS-Token: ${token}" >/dev/null 2>&1
 */5 * * * * ${c} "${base}/acms/v1/automation/process-scheduled" -H "X-ACMS-Token: ${token}" >/dev/null 2>&1
 */5 * * * * ${c} "${base}/acms/v1/automation/process-queue?limit=10" -H "X-ACMS-Token: ${token}" >/dev/null 2>&1
-*/5 * * * * ${c} "${base}/acms-ai/v1/cron/scan?cron_key=${key}" >/dev/null 2>&1
-*/2 * * * * ${c} "${base}/acms-ai/v1/cron/work?cron_key=${key}" >/dev/null 2>&1
-*/5 * * * * ${c} "${base}/acms-ai/v1/cron/process?cron_key=${key}" >/dev/null 2>&1
+*/5 * * * * ${ai_scan} >/dev/null 2>&1
+*/2 * * * * ${ai_work} >/dev/null 2>&1
+*/5 * * * * ${ai_process} >/dev/null 2>&1
 # <<< latvps ${id} <<<
 EOF
 )"
