@@ -43,9 +43,10 @@ rand_pass() { openssl rand -hex "${1:-24}"; }
 # Dùng:  render_template templates/x.tmpl SLUG=foo MEM=512m > out
 # Dùng __KEY__ (KHÔNG dùng ${VAR}) để token render-time không đụng ${DB_PASSWORD}
 # vốn để nguyên cho docker compose đọc từ .env lúc chạy.
+# Trả 1 (KHÔNG die) khi thiếu template: die = exit -> caller không chạy được rollback.
 render_template() {
   local tmpl="$1"; shift
-  [ -f "$tmpl" ] || die "Không tìm thấy template: $tmpl"
+  [ -f "$tmpl" ] || { warn "Không tìm thấy template: $tmpl"; return 1; }
   local content; content="$(cat "$tmpl")"
   local pair key val
   for pair in "$@"; do
@@ -58,8 +59,10 @@ render_template() {
 }
 
 # Chờ MariaDB của 1 site sẵn sàng (truyền tên container db).
+# db_pass CÓ default rỗng: thiếu tham số + `set -u` = "unbound variable" giết cả lat giữa chừng
+# (act_restore từng chết đúng kiểu này SAU khi đã giải nén, TRƯỚC khi import DB).
 wait_for_db() {
-  local db_container="$1" db_pass="$2" tries="${3:-60}"
+  local db_container="$1" db_pass="${2:-}" tries="${3:-60}"
   info "Chờ database '${db_container}' sẵn sàng..."
   for i in $(seq 1 "$tries"); do
     # Ép TCP (-h127.0.0.1) + user 'wordpress': chỉ thành công khi server THẬT đã mở mạng
@@ -79,7 +82,11 @@ wait_for_db() {
     fi
     sleep 2
   done
-  die "Database '${db_container}' không phản hồi sau $((tries*2))s."
+  # Trả 1 (KHÔNG die): die = exit 1, thoát thẳng process -> `|| { _add_rollback; ... }` ở caller
+  # KHÔNG BAO GIỜ chạy -> site hỏng dở còn nguyên container/volume/thư mục/symlink, và domain bị
+  # "chiếm" nên học viên không add lại được. Để caller tự quyết định dọn dẹp.
+  warn "Database '${db_container}' không phản hồi sau $((tries*2))s."
+  return 1
 }
 
 # Gọi license server kiểm tra key. Trả 0 + in JSON nếu key hợp lệ và status=active.
@@ -125,9 +132,12 @@ stored_license() {
 }
 
 # Lưu license key (validate xong mới gọi).
+# umask BẮT BUỘC nằm trong subshell. Đặt trực tiếp sẽ rò ra CẢ process lat: sau đó
+# unzip trong fetch_payload tạo thư mục 0700 -> rsync -a bê nguyên sang site ->
+# nginx (uid 101) không traverse được -> MỌI css/js của theme+plugin trả 404 (giao diện vỡ,
+# admin plugin không load). php-fpm (uid 82 = owner) vẫn đọc được nên lỗi rất khó thấy.
 save_license() {
-  umask 077
-  printf '%s\n' "$1" > "$LICENSE_FILE"
+  ( umask 077; printf '%s\n' "$1" > "$LICENSE_FILE" )
   chmod 600 "$LICENSE_FILE"
 }
 
@@ -202,11 +212,18 @@ site_id_by_domain() {
   return 1
 }
 
-# Nhận id HOẶC domain -> trả về id.
+# Nhận id HOẶC domain -> trả về id THẬT (không bao giờ trả domain).
+# BẪY: /opt/sites/<domain> là symlink -> <id>, nên `[ -f "$(site_conf "$domain")" ]` cũng ĐÚNG.
+# Nếu nhận nhánh tắt đó, hàm trả về "example.com" thay vì "s-a1b2c3" -> wp_run gọi container
+# "example.com_php" (không tồn tại) -> backup/domain fail âm thầm; và site_remove xoá symlink
+# trước rồi `rm -rf $dir` thành no-op -> site zombie + domain bị chiếm vĩnh viễn.
+# Vì vậy: chỉ nhận nhánh tắt khi arg là thư mục THẬT (không phải symlink).
 resolve_site() {
   local arg="$1"
   [ -n "$arg" ] || return 1
-  [ -f "$(site_conf "$arg")" ] && { printf '%s' "$arg"; return 0; }
+  if [ ! -L "$(site_dir "$arg")" ] && [ -f "$(site_conf "$arg")" ]; then
+    printf '%s' "$arg"; return 0
+  fi
   site_id_by_domain "$arg"
 }
 
@@ -263,9 +280,15 @@ ssl_make_selfsigned() {
 
 # Sửa quyền wp-content để WordPress cài/sửa/xoá plugin+theme + upload media (không đòi FTP).
 # Chạy chown TRONG container php (đúng uid www-data của image).
+# CHỐT QUAN TRỌNG: php-fpm chạy uid 82 (www-data) NHƯNG nginx của container _web chạy uid 101.
+# nginx phục vụ thẳng static asset (css/js/ảnh) -> thư mục 0700 owner www-data sẽ khiến nginx
+# KHÔNG traverse được -> 404 toàn bộ asset dù file vẫn còn nguyên trên disk. chown thôi KHÔNG đủ,
+# phải chuẩn hoá mode: dir 755 / file 644. Bước này cũng tự chữa lành site đã lỡ tạo sai quyền.
 fix_perms() {
   local id="$1"
   docker exec "${id}_php" chown -R www-data:www-data /var/www/html/wp-content 2>/dev/null || true
+  docker exec "${id}_php" find /var/www/html/wp-content -type d -exec chmod 755 {} + 2>/dev/null || true
+  docker exec "${id}_php" find /var/www/html/wp-content -type f -exec chmod 644 {} + 2>/dev/null || true
 }
 
 # BẢO ĐẢM db + redis (và php) KHÔNG publish cổng ra host - chỉ trong network internal.
@@ -426,6 +449,13 @@ fetch_payload() {
   fi
 
   rm -rf "$tmp"
+
+  # Chuẩn hoá quyền payload NGAY sau unzip, không phụ thuộc umask hiện hành của process.
+  # unzip áp umask lúc tạo thư mục; zip lại khai báo dir 0777 -> mode thực tế hoàn toàn do umask
+  # quyết định. Payload là NGUỒN của rsync -a sang site, nên sai ở đây là sai ở mọi site tạo sau.
+  find "$payload" -type d -exec chmod 755 {} + 2>/dev/null || true
+  find "$payload" -type f -exec chmod 644 {} + 2>/dev/null || true
+
   [ "$rc" = 0 ] && ok "Payload đã cập nhật từ app.lat.vn." || warn "Payload tải chưa đầy đủ."
   return "$rc"
 }

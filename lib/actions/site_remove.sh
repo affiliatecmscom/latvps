@@ -21,6 +21,10 @@ act_site_remove() {
   local key; key="$(site_get "$id" LICENSE_KEY 2>/dev/null || true)"
   [ -n "$key" ] && { info "Giải phóng license slot..."; license_deactivate "$key" "$domain" && ok "Đã deactivate." || warn "Không deactivate được (bỏ qua)."; }
 
+  # Dọn cron TRƯỚC khi container mất: dòng cron gắn cứng domain, để lại thì cứ 2-5 phút lại bắn
+  # vào domain đã chết (và token cũ nằm lại crontab vĩnh viễn).
+  cron_remove_for_site "$id" && info "Đã dọn cron của site." || warn "Dọn cron chưa xong (xem: crontab -l)."
+
   info "Tắt + xoá container/volume..."
   docker compose -f "$dir/docker-compose.yml" --env-file "$dir/.env" down -v >/dev/null 2>&1 || warn "compose down lỗi."
 

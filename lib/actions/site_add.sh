@@ -8,12 +8,14 @@ act_site_add() {
   host_ready || { ui_msg "Host chưa sẵn sàng. Chạy: lat setup"; return 1; }
 
   local domain="" type="" ssl="" email="" license=""
+  # Mỗi cờ phải tự kiểm có giá trị đi kèm: `set -u` + "$2" thiếu = "$2: unbound variable",
+  # thoát ngay với lỗi bash khó hiểu (vd gõ `lat add foo.com --type`).
   while [ $# -gt 0 ]; do
     case "$1" in
-      --type)    type="$2"; shift 2;;
-      --ssl)     ssl="$2"; shift 2;;
-      --email)   email="$2"; shift 2;;
-      --license) license="$2"; shift 2;;
+      --type)    [ $# -ge 2 ] || { warn "--type cần giá trị (affiliatecms|vanilla)."; return 1; }; type="$2"; shift 2;;
+      --ssl)     [ $# -ge 2 ] || { warn "--ssl cần giá trị (cloudflare|auto|origin)."; return 1; }; ssl="$2"; shift 2;;
+      --email)   [ $# -ge 2 ] || { warn "--email cần giá trị."; return 1; }; email="$2"; shift 2;;
+      --license) [ $# -ge 2 ] || { warn "--license cần giá trị."; return 1; }; license="$2"; shift 2;;
       -*)        shift;;
       *)         [ -z "$domain" ] && domain="$1"; shift;;
     esac
@@ -100,7 +102,7 @@ act_site_add() {
 
   # compose + nginx.conf + .env
   render_template "${WPF_ROOT}/templates/wordpress/compose.yml.tmpl" "DOMAIN=${domain}" "ID=${id}" > "$dir/docker-compose.yml" || { _add_rollback; return 1; }
-  cp "${WPF_ROOT}/templates/wordpress/nginx.conf" "$dir/nginx.conf"
+  cp "${WPF_ROOT}/templates/wordpress/nginx.conf" "$dir/nginx.conf" || { _add_rollback; return 1; }
 
   local db_password redis_password le_host="" le_email=""
   db_password="$(rand_pass 24)"; redis_password="$(rand_pass 20)"

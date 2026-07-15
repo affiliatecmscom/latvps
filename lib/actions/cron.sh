@@ -11,12 +11,27 @@ _cron_pick_site() {
   ui_menu "Chọn site" "${args[@]}"
 }
 
-# Ghi/đè block cron của 1 site (đánh dấu để idempotent).
+# Ghi/đè block cron của 1 site (đánh dấu để idempotent). Trả exit code của crontab.
 _cron_write_block() {
-  local id="$1" block="$2" tmp; tmp="$(mktemp)"
+  local id="$1" block="$2" tmp rc; tmp="$(mktemp)"
   crontab -l 2>/dev/null | sed "/# >>> latvps ${id} >>>/,/# <<< latvps ${id} <<</d" > "$tmp"
   printf '%s\n' "$block" >> "$tmp"
-  crontab "$tmp"; rm -f "$tmp"
+  crontab "$tmp"; rc=$?
+  rm -f "$tmp"
+  return "$rc"
+}
+
+# Xoá block cron của 1 site (không hỏi). Dùng khi xoá site / đổi domain.
+# BẮT BUỘC gọi lúc `lat rm`: dòng cron gắn CỨNG domain, không dọn thì chúng bắn mãi vào domain
+# đã chết và token của site cũ nằm lại crontab vĩnh viễn.
+cron_remove_for_site() {
+  local id="$1" tmp rc
+  need_cmd crontab || return 0
+  tmp="$(mktemp)"
+  crontab -l 2>/dev/null | sed "/# >>> latvps ${id} >>>/,/# <<< latvps ${id} <<</d" > "$tmp"
+  crontab "$tmp"; rc=$?
+  rm -f "$tmp"
+  return "$rc"
 }
 
 # Cài 6 cron AffiliateCMS cho 1 site theo ID (KHÔNG hỏi, KHÔNG popup) - dùng cho cả luồng
@@ -56,8 +71,9 @@ cron_install_for_site() {
 # <<< latvps ${id} <<<
 EOF
 )"
+  # Trả đúng exit code: `return 0` vô điều kiện khiến site_add luôn báo "Đã cài cron tự động"
+  # kể cả khi crontab lỗi -> automation không bao giờ chạy mà không ai biết.
   _cron_write_block "$id" "$block"
-  return 0
 }
 
 # (menu) Tự cài 6 cron AffiliateCMS cho 1 site (chọn site + popup kết quả).
@@ -91,10 +107,7 @@ _cron_add_custom() {
 _cron_remove_site() {
   local id; id="$(_cron_pick_site)" || return 0
   [ -n "$id" ] || return 0
-  local tmp; tmp="$(mktemp)"
-  crontab -l 2>/dev/null | sed "/# >>> latvps ${id} >>>/,/# <<< latvps ${id} <<</d" > "$tmp"
-  crontab "$tmp"; rm -f "$tmp"
-  ok "Đã xoá cron của site ${id}."
+  cron_remove_for_site "$id" && ok "Đã xoá cron của site ${id}." || warn "Xoá cron lỗi."
 }
 
 act_cron() {

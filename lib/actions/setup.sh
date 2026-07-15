@@ -142,7 +142,10 @@ UUL
   # 7. ACME email + front proxy (nginx-proxy + acme-companion)
   mkdir -p /opt/proxy/certs; chmod 700 /opt/proxy/certs 2>/dev/null || true
   if [ ! -f "${WPF_ROOT}/proxy/.env" ]; then
-    local acme_email; acme_email="$(ui_input "Email cho Let's Encrypt (cảnh báo cert hết hạn):" "")"
+    # `|| acme_email=""` là BẮT BUỘC: ui_input trả 1 khi học viên gõ 0 (chính nó mời "0=quay lại"),
+    # mà gán trần + `set -e` = thoát im lặng giữa lúc cài -> proxy không chạy, symlink lat không tạo,
+    # không một thông báo nào. Email LE chỉ để cảnh báo cert hết hạn nên bỏ trống được.
+    local acme_email; acme_email="$(ui_input "Email cho Let's Encrypt (cảnh báo cert hết hạn):" "")" || acme_email=""
     printf 'ACME_EMAIL=%s\n' "$acme_email" > "${WPF_ROOT}/proxy/.env"
     chmod 600 "${WPF_ROOT}/proxy/.env"
   fi

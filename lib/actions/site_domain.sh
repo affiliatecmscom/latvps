@@ -76,5 +76,16 @@ act_site_domain() {
   site_link_remove "$old"
   site_link_set "$id" "$new"
 
+  # 5. Cài lại cron theo domain MỚI. Dòng cron gắn cứng domain cũ (--resolve + URL), không cập nhật
+  # thì toàn bộ automation AffiliateCMS chết IM LẶNG: site vẫn chạy, chỉ tự động hoá ngừng.
+  # site.conf phải được cập nhật TRƯỚC (cron_install_for_site đọc DOMAIN từ đó).
+  if [ "$type" = "affiliatecms" ] && need_cmd crontab; then
+    if crontab -l 2>/dev/null | grep -q "# >>> latvps ${id} >>>"; then
+      info "Cập nhật cron theo domain mới..."
+      cron_install_for_site "$id" && ok "Đã trỏ cron sang ${new}." \
+        || warn "Cập nhật cron chưa xong - chạy lại: lat cron -> Cài cron AffiliateCMS."
+    fi
+  fi
+
   ui_msg "Đã đổi domain: ${old} -> ${new}\n\nThư mục: ${SITES_ROOT}/${new}  (-> $(site_dir "$id"))\n>> Nhớ trỏ A record '${new}' (và www) về IP VPS này.\n>> SSL ${ssl}: cert sẽ được cấp/áp khi domain trỏ đúng."
 }

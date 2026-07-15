@@ -21,12 +21,18 @@ _backup_one() {
   chmod 600 "$tmp" 2>/dev/null || true
 
   local file="${out}/${stamp}.tar.gz"
-  ( umask 077; tar -C "$SITES_ROOT" -czf "$file" "$id" 2>/dev/null )
+  # PHẢI kiểm exit code của tar: bỏ qua = báo "Đã backup" cho file rỗng/hỏng (vd hết disk),
+  # rồi file rác đó vẫn chiếm 1 slot xoay vòng -> vài ngày sau xoá sạch bản backup CÒN TỐT.
+  if ! ( umask 077; tar -C "$SITES_ROOT" -czf "$file" "$id" 2>/dev/null ); then
+    warn "Đóng gói backup lỗi cho ${id} (hết dung lượng?). Kiểm tra: df -h"
+    rm -f "$file" "$tmp"
+    return 1
+  fi
   chmod 600 "$file" 2>/dev/null || true
   rm -f "$tmp"
 
-  # xoay vòng
-  ls -1t "${out}"/*.tar.gz 2>/dev/null | tail -n +"$((BACKUP_KEEP+1))" | xargs -r rm -f
+  # xoay vòng. `|| true`: glob không khớp -> ls trả 1 -> pipefail+set -e giết cả lat không thông báo.
+  ls -1t "${out}"/*.tar.gz 2>/dev/null | tail -n +"$((BACKUP_KEEP+1))" | xargs -r rm -f || true
   ok "Đã backup: ${file}"
   printf '%s' "$file"
 }
@@ -54,12 +60,28 @@ act_restore() {
   local id; id="$(resolve_site "$arg")" || { warn "Không tìm thấy site: $arg"; return 1; }
   local dir; dir="$(site_dir "$id")"
 
+  # Tar đóng gói theo ID (`tar ... "$id"`) nên nó LUÔN giải nén vào đúng ID nhúng bên trong,
+  # bất kể tham số <id|domain> ở trên. Không kiểm tra = `lat restore siteB backupA.tar.gz` sẽ
+  # hồi sinh site A (kể cả A đã xoá) và KHÔNG đụng gì tới B, nhưng vẫn báo "Phục hồi xong B".
+  local tar_id; tar_id="$(tar -tzf "$file" 2>/dev/null | head -1 | cut -d/ -f1)"
+  if [ -z "$tar_id" ]; then
+    warn "Không đọc được nội dung ${file} (file hỏng?)."; return 1
+  fi
+  if [ "$tar_id" != "$id" ]; then
+    warn "File backup này là của site '${tar_id}', không phải '${id}'."
+    warn "Chạy đúng site: lat restore ${tar_id} ${file}"
+    return 1
+  fi
+
   ui_yesno "Phục hồi site ${id} từ ${file}? Dữ liệu hiện tại sẽ bị ghi đè." || return 1
 
   info "Giải nén wp-content + config..."
   tar -C "$SITES_ROOT" -xzf "$file" 2>/dev/null || { warn "Giải nén lỗi."; return 1; }
   docker compose -f "$dir/docker-compose.yml" --env-file "$dir/.env" up -d
-  wait_for_db "${id}_db"
+  # Lấy pass từ .env vừa khôi phục: thiếu tham số này trước đây làm restore chết giữa chừng
+  # (sau khi đã ghi đè file, trước khi import DB -> site còn file mới + database CŨ).
+  local db_pass; db_pass="$(sed -n 's/^DB_PASSWORD=//p' "$dir/.env" 2>/dev/null | head -n1)"
+  wait_for_db "${id}_db" "$db_pass" || { warn "DB không lên - site đang ở trạng thái dở. Chạy lại: lat restore ${id} ${file}"; return 1; }
   if [ -f "${dir}/db.sql" ]; then
     info "Import database..."
     docker exec -i "${id}_db" sh -c 'exec mariadb -uwordpress -p"$MARIADB_PASSWORD" wordpress' < "${dir}/db.sql" \
