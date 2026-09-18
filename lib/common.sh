@@ -405,6 +405,47 @@ host_ready() {
 # gated theo license. Repo KHÔNG chứa source plugin (payload/ gitignore).
 # ============================================================
 
+# Kiểm SHA512 của 1 file. verify_sha512 <file> <hash mong đợi> -> 0 nếu khớp.
+# So sánh không phân biệt hoa/thường và bỏ khoảng trắng (file .sha512 hay kèm tên file + \n).
+verify_sha512() {
+  local f="$1" want="$2" got
+  [ -f "$f" ] || return 1
+  want="$(printf '%s' "$want" | tr -d '[:space:]' | tr '[:upper:]' '[:lower:]')"
+  # Chỉ nhận đúng 128 ký tự hex - chuỗi rác (vd trang lỗi HTML) không được coi là "hash".
+  printf '%s' "$want" | grep -Eq '^[0-9a-f]{128}$' || return 1
+  got="$(sha512sum "$f" 2>/dev/null | awk '{print $1}')"
+  [ -n "$got" ] && [ "$got" = "$want" ]
+}
+
+# Giải nén zip vào <parent>/<name> theo kiểu THAY THẾ AN TOÀN:
+#   kiểm tra zip -> bung ra thư mục tạm -> xác nhận có thư mục gốc <name> -> mới tráo vào.
+# Bản cũ làm NGƯỢC: rm -rf bản đang dùng RỒI mới unzip. Zip hỏng (mạng đứt giữa chừng, server
+# trả trang lỗi HTML thay vì zip, hết đĩa) = mất luôn plugin đang chạy được; máy mất mạng thì
+# không tải lại được -> lat add chết ở bước copy payload mà không hiểu vì sao.
+# Thư mục tạm đặt NGAY TRONG parent để mv là cùng filesystem (không copy nửa chừng rồi hỏng).
+unzip_replace_dir() {
+  local zip="$1" parent="$2" name="$3"
+  [ -n "$name" ] || return 1
+  if ! unzip -tqq "$zip" >/dev/null 2>&1; then
+    warn "File tải về không phải zip hợp lệ (${name}) - GIỮ NGUYÊN bản đang dùng."
+    return 1
+  fi
+  local stage
+  stage="$(mktemp -d "${parent}/.stage-XXXXXX")" || return 1
+  if ! unzip -q -o "$zip" -d "$stage" >/dev/null 2>&1; then
+    warn "Giải nén ${name} lỗi - GIỮ NGUYÊN bản đang dùng."; rm -rf "$stage"; return 1
+  fi
+  if [ ! -d "${stage}/${name}" ]; then
+    warn "Gói ${name} thiếu thư mục gốc '${name}' - GIỮ NGUYÊN bản đang dùng."; rm -rf "$stage"; return 1
+  fi
+  rm -rf "${parent:?}/${name:?}"
+  if ! mv "${stage}/${name}" "${parent}/${name}"; then
+    warn "Không tráo được ${name}."; rm -rf "$stage"; return 1
+  fi
+  rm -rf "$stage"
+  return 0
+}
+
 ensure_unzip() {
   need_cmd unzip && return 0
   export DEBIAN_FRONTEND=noninteractive
@@ -433,8 +474,7 @@ fetch_payload() {
     info "Tải plugin ${p} từ app.lat.vn..."
     if curl -fsS --max-time 120 -o "${tmp}/${p}.zip" \
         "${LICENSE_SERVER}/update/download?plugin=${p}&license_key=${key}&domain=factory"; then
-      rm -rf "${payload}/plugins/${p}"
-      unzip -q -o "${tmp}/${p}.zip" -d "${payload}/plugins/" || { warn "Giải nén ${p} lỗi."; rc=1; }
+      unzip_replace_dir "${tmp}/${p}.zip" "${payload}/plugins" "$p" || rc=1
     else
       warn "Tải ${p} thất bại (license còn hạn?)."; rc=1
     fi
@@ -443,8 +483,7 @@ fetch_payload() {
   info "Tải theme affiliateCMS-theme..."
   if curl -fsS --max-time 120 -o "${tmp}/theme.zip" \
       "${LICENSE_SERVER}/update/theme/download?slug=affiliateCMS-theme"; then
-    rm -rf "${payload}/themes/affiliateCMS-theme"
-    unzip -q -o "${tmp}/theme.zip" -d "${payload}/themes/" || { warn "Giải nén theme lỗi."; rc=1; }
+    unzip_replace_dir "${tmp}/theme.zip" "${payload}/themes" "affiliateCMS-theme" || rc=1
   else
     warn "Tải theme thất bại."; rc=1
   fi

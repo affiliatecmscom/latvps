@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# actions/setup.sh - bootstrap host (Docker + UFW + wp-cli + network + Caddy + symlink lat).
+# actions/setup.sh - bootstrap host (Docker + UFW + wp-cli + network + proxy + symlink lat).
 # License: hỏi nhưng KHÔNG bắt buộc (site vanilla không cần). Idempotent.
 
 act_setup() {
@@ -55,16 +55,41 @@ act_setup() {
     ok "Docker đã cài."
   fi
 
-  # 3. wp-cli.phar
+  # 3. wp-cli.phar - tải về thư mục tạm, ĐỐI CHIẾU SHA512 rồi mới đưa vào bin/.
+  # wp-cli publish sẵn file .sha512 cạnh phar nên verify được, không cần hạ tầng riêng.
+  # Bản cũ ghi thẳng phar vào bin/ không kiểm gì: phar tải hỏng/bị chèn = MỌI thao tác
+  # wp-cli của MỌI site chạy nhầm code, và lỗi hiện ra rất mơ hồ (wp_run im lặng trả rỗng).
   mkdir -p "${WPF_ROOT}/bin"
   if [ -f "${WPF_ROOT}/bin/wp-cli.phar" ]; then
     ok "wp-cli.phar đã có."
   else
     info "Tải wp-cli.phar..."
-    curl -fsSL https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar \
-      -o "${WPF_ROOT}/bin/wp-cli.phar"
-    chmod 0755 "${WPF_ROOT}/bin/wp-cli.phar"
-    ok "wp-cli.phar đã tải."
+    local phar_url="https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar"
+    local phar_tmp; phar_tmp="$(mktemp)"
+    if curl -fsSL --max-time 120 "$phar_url" -o "$phar_tmp"; then
+      local want; want="$(curl -fsSL --max-time 30 "${phar_url}.sha512" 2>/dev/null || true)"
+      if [ -n "$want" ]; then
+        if verify_sha512 "$phar_tmp" "$want"; then
+          install -m 0755 "$phar_tmp" "${WPF_ROOT}/bin/wp-cli.phar"
+          ok "wp-cli.phar đã tải (SHA512 khớp)."
+        else
+          # Đây là tín hiệu tấn công hoặc tải hỏng - KHÔNG cài. host_ready sẽ báo thiếu wp-cli.
+          warn "SHA512 của wp-cli.phar KHÔNG khớp - TỪ CHỐI cài đặt."
+          warn "Có thể do tải hỏng hoặc file bị can thiệp. Chạy lại: lat setup"
+        fi
+      else
+        # Không lấy được file hash (mạng chặn?) -> kiểm tra tối thiểu, đừng chặn học viên.
+        if head -c 64 "$phar_tmp" | grep -q 'php' && [ "$(stat -c%s "$phar_tmp" 2>/dev/null || echo 0)" -gt 1000000 ]; then
+          install -m 0755 "$phar_tmp" "${WPF_ROOT}/bin/wp-cli.phar"
+          warn "Không tải được file .sha512 - đã cài wp-cli sau kiểm tra sơ bộ (chưa xác thực hash)."
+        else
+          warn "wp-cli.phar tải về không hợp lệ - TỪ CHỐI cài đặt. Chạy lại: lat setup"
+        fi
+      fi
+    else
+      warn "Tải wp-cli.phar thất bại (mạng?). Chạy lại: lat setup"
+    fi
+    rm -f "$phar_tmp"
   fi
 
   # 4. UFW

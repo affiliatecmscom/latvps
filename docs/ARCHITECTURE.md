@@ -329,14 +329,26 @@ Nguồn: rà soát nội bộ + [issue #1](https://github.com/affiliatecmscom/la
 - [x] CI: shellcheck + `bash -n` + bats + release-guard
 - [x] Viết lại tài liệu này cho khớp code
 
-### Kế tiếp — v3.19.0 "siết bề mặt tấn công"
-- [ ] `tecnativa/docker-socket-proxy` chắn trước docker.sock (§6). Lưu ý: acme-companion cần
-      `POST`+`EXEC` để reload nginx-proxy, nên phải tách 2 tầng quyền, không phải đổi 3 dòng
-- [ ] Verify SHA256 cho `fetch_payload` / `fetch_demo_bundle` / `wp-cli.phar` trước khi giải nén
-- [ ] Chuyển `license_key` từ query string sang POST body ở `fetch_payload`/`fetch_demo_bundle`
-      (cùng loại lỗi đã sửa cho `cron_key` ở `585fd3f` — key nằm nguyên văn trong access log)
-- [ ] `cpus: "1.0"` cạnh mỗi `mem_limit` (chặn 1 site ngốn hết CPU)
-- [ ] `healthcheck:` cho db/redis/php để Docker tự phục hồi (hiện chỉ có `wait_for_db` lúc tạo)
+### Đã làm — v3.19.0 "siết bề mặt tấn công" (phần không cần VPS/server)
+- [x] `cpus:` cạnh mỗi `mem_limit` — db 1.0, php 1.0, redis 0.5, web 0.5
+- [x] `healthcheck:` cho db + redis, và `lat status` cảnh báo khi service không khoẻ
+- [x] Verify **SHA512** cho `wp-cli.phar` (wp-cli publish sẵn file `.sha512` cạnh phar)
+- [x] `unzip_replace_dir()` — tải payload về, **kiểm tra rồi mới tráo**. Bản cũ `rm -rf` thư
+      mục đang dùng *trước* khi `unzip`: zip hỏng / server trả HTML / hết đĩa = mất luôn plugin
+      đang chạy được, và máy mất mạng thì không tải lại được
+
+### Còn lại — cần VPS thật hoặc cần sửa app.lat.vn
+- [ ] `tecnativa/docker-socket-proxy` chắn trước docker.sock (§6). **Cần VPS test**: đụng vào
+      đường cấp cert, sai là site mất HTTPS. Lưu ý acme-companion cần `POST`+`EXEC` để reload
+      nginx-proxy nên phải tách 2 tầng quyền, không phải đổi 3 dòng
+- [ ] SHA256 cho payload plugin/theme + bundle demo. **Chặn ở server**: app.lat.vn phải trả
+      hash kèm file thì client mới có gì để đối chiếu
+- [ ] Chuyển `license_key` từ query string sang POST body. **Chặn ở server**: endpoint
+      `update/download` hiện trả `405 Method Not Allowed` cho POST (route đăng ký GET-only).
+      Cùng loại lỗi đã sửa cho `cron_key` ở `585fd3f` — key nằm nguyên văn trong access log
+- [ ] Nối `depends_on: condition: service_healthy` sau khi healthcheck được xác nhận trên VPS
+- [ ] `healthcheck:` cho php/web — chưa làm vì `wordpress:fpm-alpine` không có sẵn lệnh kiểm
+      fpm đáng tin (busybox `nc -z` không chắc có), thà không có còn hơn báo hỏng nhầm
 
 ### Sau đó — v3.20.0 "chống mất dữ liệu"
 - [ ] Cron `lat backup all` hằng ngày, cài sẵn trong `lat setup`

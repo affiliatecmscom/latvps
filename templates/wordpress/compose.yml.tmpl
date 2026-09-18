@@ -3,6 +3,15 @@
 # Giá trị ${...} đọc từ .env của site (docker compose interpolate). VIRTUAL_HOST/LE_* để nginx-proxy + acme-companion.
 # BẢO MẬT: TUYỆT ĐỐI KHÔNG thêm 'ports:' cho db/redis/php - chúng chỉ ở network 'internal'
 # (db/redis không bao giờ lộ ra host/internet). lat tự kiểm tra điều này sau khi tạo site.
+#
+# cpus: chặn 1 site ngốn hết CPU làm chậm mọi site khác (bot cào, plugin loop vô hạn).
+# Đây là GIỚI HẠN TRẦN, không phải đặt chỗ - site nhàn rỗi không bị thiệt gì.
+#
+# healthcheck: chỉ đặt cho db + redis (hai service mà "chết âm thầm" là hỏng thật, và lệnh
+# kiểm tra chắc chắn có trong image). LƯU Ý: Docker thường KHÔNG tự restart container
+# unhealthy - healthcheck ở đây để `lat status` / `docker ps` nhìn ra ngay, thay vì site 500
+# cả đêm mà container vẫn hiện "running". Chưa nối vào depends_on: service_healthy vì việc đó
+# đổi hành vi khởi động, cần test trên VPS thật trước.
 name: site-__ID__
 
 services:
@@ -20,6 +29,14 @@ services:
     networks: [ internal ]
     security_opt: [ "no-new-privileges:true" ]
     mem_limit: 512m
+    cpus: "1.0"
+    healthcheck:
+      # healthcheck.sh do chính image mariadb ship sẵn (/usr/local/bin).
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
 
   redis:
     image: redis:7-alpine
@@ -31,6 +48,14 @@ services:
     networks: [ internal ]
     security_opt: [ "no-new-privileges:true" ]
     mem_limit: 96m
+    cpus: "0.5"
+    healthcheck:
+      # Mật khẩu đã nằm trong command: của chính service này nên không lộ thêm gì mới.
+      test: ["CMD-SHELL", "redis-cli -a '${REDIS_PASSWORD}' --no-auth-warning ping | grep -q PONG"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
 
   php:
     image: wordpress:fpm-alpine
@@ -53,6 +78,7 @@ services:
     depends_on: [ db, redis ]
     security_opt: [ "no-new-privileges:true" ]
     mem_limit: 512m
+    cpus: "1.0"
 
   web:
     image: nginx:alpine
@@ -70,6 +96,7 @@ services:
     depends_on: [ php ]
     security_opt: [ "no-new-privileges:true" ]
     mem_limit: 128m
+    cpus: "0.5"
 
 networks:
   internal:
