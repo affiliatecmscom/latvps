@@ -1,3 +1,4 @@
+# shellcheck shell=bash
 # /etc/profile.d/latvps-update.sh
 # Thông báo khi đăng nhập SSH nếu LATVPS có bản mới. Cài bởi 'lat setup'.
 # Nhẹ + an toàn: chỉ đọc cache, không gọi mạng đồng bộ (refresh chạy NỀN khi cache cũ).

@@ -168,8 +168,7 @@ act_site_add() {
   docker cp "${WPF_ROOT}/bin/wp-cli.phar" "${php}:/usr/local/bin/wp-cli.phar" >/dev/null 2>&1
 
   info "Chờ WordPress core..."
-  local i
-  for i in $(seq 1 30); do wp_run "$id" core version >/dev/null 2>&1 && break; sleep 2; done
+  for _ in $(seq 1 30); do wp_run "$id" core version >/dev/null 2>&1 && break; sleep 2; done
   wp_run "$id" core version >/dev/null 2>&1 || { warn "WP core chưa sẵn sàng."; _add_rollback; return 1; }
 
   local admin_user="admin" admin_pass; admin_pass="$(rand_pass 10)"

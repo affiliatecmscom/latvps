@@ -107,9 +107,45 @@ curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:8110/wp-content/acms-d
 ```bash
 cd /opt/latvps
 # sửa code -> bump VERSION -> commit
-git push          # <- đây LÀ phát hành: VPS nào chạy `lat update` là nhận ngay
+
+# 1. Kiểm TẠI CHỖ trước khi push (CI sẽ chạy đúng 3 thứ này)
+shellcheck --severity=warning --shell=bash $(find . -path ./.git -prune -o -name '*.sh' -print) bin/lat
+bats tests/
+for f in $(find . -path ./.git -prune -o \( -name '*.sh' -o -path './bin/lat' \) -print); do bash -n "$f"; done
+
+# 2. Push code -> đây LÀ phát hành: VPS nào chạy `lat update` là nhận ngay
+git push
+
+# 3. BẮT BUỘC: tag đúng số trong file VERSION
+git tag -a "v$(cat VERSION)" -m "LATVPS $(cat VERSION)"
+git push origin "v$(cat VERSION)"
 ```
-`lat update` = `git pull --ff-only` từ `main`.
+
+`lat update` = `git pull --ff-only` từ nhánh đang bám.
+
+### Vì sao PHẢI tag
+
+Tag là **đường lùi duy nhất** cho học viên khi bản mới có lỗi:
+
+```bash
+# học viên quay về bản ổn định
+LATVPS_REF=v3.17.2 curl -fsSL https://raw.githubusercontent.com/affiliatecmscom/latvps/main/latvps.sh | sudo bash
+
+# gỡ ghim, theo lại bản mới nhất
+git -C /opt/latvps checkout main && lat update
+```
+
+Không tag = học viên gặp bug chỉ còn cách đọc `git log` rồi tự đoán commit nào lành.
+
+CI job `release-guard` **chặn** tag lệch với file `VERSION` (tag `v3.18.0` thì `VERSION` phải
+là `3.18.0`), tránh cảnh `lat version` báo một số mà `LATVPS_REF` ghim một số khác.
+
+### Lưới an toàn khi bản mới hỏng
+
+- `.github/workflows/ci.yml` chặn ở đầu nguồn: shellcheck + `bash -n` + bats + release-guard.
+- `lat update` ghi lại commit trước khi pull, chạy `bash -n` toàn cây sau khi pull, và **tự
+  `git reset --hard` về commit cũ** nếu bản mới lỗi cú pháp. Học viên không phải gõ lệnh git nào.
+- Lưới này chỉ bắt lỗi **cú pháp**. Lỗi logic vẫn lọt → vẫn phải test thật trước khi push.
 
 **Quirk phải nhớ:** `lat update` chạy code **CŨ** rồi mới `git pull`, nên bước nào mới thêm vào
 `self_update` chỉ có hiệu lực từ lần update **kế tiếp**. Nếu thấy thiếu: chạy `lat update` lần 2,
@@ -171,7 +207,8 @@ khác, một chiều, và không liên quan tới `Telemetry.php`.
 - [ ] Commit + push repo demo-iflmmo
 - [ ] `acms:release` -> **verify bằng `update/check`**, không tin thông báo
 - [ ] Nội dung demo có đổi thật không? Nếu có: backup bundle cũ -> build -> verify -> so với backup
-- [ ] LATVPS: bump VERSION -> commit -> push
+- [ ] LATVPS: bump VERSION -> `shellcheck` + `bats tests/` PASS -> commit -> push
+- [ ] LATVPS: **tag** `v$(cat VERSION)` và push tag (không tag = học viên không có đường lùi)
 - [ ] VPS: `lat update` -> `lat payload-sync` -> `lat add`
 
 ## 8. Ranh giới giữa các dự án

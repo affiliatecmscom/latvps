@@ -10,6 +10,7 @@ ROOT_DIR="$(cd "${BIN_DIR}/.." && pwd)"
 # common.sh tự set WPF_ROOT đúng (theo vị trí của chính nó).
 source "${ROOT_DIR}/lib/common.sh"
 source "${ROOT_DIR}/lib/ui.sh"
+# shellcheck source=/dev/null  # đường dẫn động: nạp mọi action lúc chạy
 for a in "${WPF_ROOT}"/lib/actions/*.sh; do source "$a"; done
 source "${WPF_ROOT}/lib/menu.sh"
 

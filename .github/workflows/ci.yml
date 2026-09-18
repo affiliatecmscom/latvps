@@ -1,0 +1,67 @@
+name: CI
+
+# Mục đích: chặn commit hỏng TRƯỚC khi nó tới VPS học viên.
+# `lat update` = git pull thẳng từ main -> main hỏng là mọi máy học viên hỏng theo.
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  shellcheck:
+    name: shellcheck (severity=warning)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cài shellcheck
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq shellcheck
+
+      - name: Soi mọi script bash
+        run: |
+          # bin/lat không có đuôi .sh -> phải liệt kê riêng.
+          mapfile -t files < <(find . -path ./.git -prune -o -name '*.sh' -type f -print)
+          files+=(./bin/lat)
+          printf 'Kiểm tra %d file:\n' "${#files[@]}"
+          printf '  %s\n' "${files[@]}"
+          shellcheck --severity=warning --shell=bash "${files[@]}"
+
+  syntax:
+    name: bash -n (mọi script phải parse được)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Kiểm cú pháp
+        run: |
+          rc=0
+          while IFS= read -r f; do
+            bash -n "$f" || { echo "LỖI CÚ PHÁP: $f"; rc=1; }
+          done < <(find . -path ./.git -prune -o \( -name '*.sh' -o -path './bin/lat' \) -type f -print)
+          exit "$rc"
+
+  bats:
+    name: bats (hàm thuần)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Cài bats
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq bats
+      - name: Chạy test
+        run: bats --tap tests/
+
+  release-guard:
+    name: VERSION khớp tag (chỉ chạy khi push tag v*)
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Đối chiếu VERSION với tên tag
+        run: |
+          # Tag v3.18.0 thì file VERSION phải là 3.18.0. Lệch = học viên ghim LATVPS_REF=v3.18.0
+          # nhưng `lat version` báo số khác -> không ai truy được đang chạy bản nào.
+          tag="${GITHUB_REF_NAME#v}"
+          ver="$(tr -d '[:space:]' < VERSION)"
+          echo "tag=${tag}  VERSION=${ver}"
+          [ "$tag" = "$ver" ] || { echo "LỆCH: tag '${tag}' != VERSION '${ver}'"; exit 1; }

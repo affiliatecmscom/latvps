@@ -64,7 +64,7 @@ render_template() {
 wait_for_db() {
   local db_container="$1" db_pass="${2:-}" tries="${3:-60}"
   info "Chờ database '${db_container}' sẵn sàng..."
-  for i in $(seq 1 "$tries"); do
+  for _ in $(seq 1 "$tries"); do
     # Ép TCP (-h127.0.0.1) + user 'wordpress': chỉ thành công khi server THẬT đã mở mạng
     # và user/DB đã tạo xong. Tránh false-positive của server tạm (socket-only) lúc init.
     if [ -n "$db_pass" ]; then
@@ -154,6 +154,7 @@ license_deactivate() {
 # Site registry - mỗi site 1 thư mục /opt/sites/<id> + site.conf.
 # ID bất biến (sinh lúc tạo); domain là thuộc tính đổi được.
 # ============================================================
+# shellcheck disable=SC2034  # dùng ở lib/actions/backup.sh (file khác, source cùng lúc)
 BACKUPS_ROOT="/opt/backups"
 
 # Sinh ID site bất biến, vd s-a1b2c3.
