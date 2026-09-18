@@ -338,6 +338,9 @@ Nguồn: rà soát nội bộ + [issue #1](https://github.com/affiliatecmscom/la
       đang chạy được, và máy mất mạng thì không tải lại được
 
 ### Còn lại — cần VPS thật hoặc cần sửa app.lat.vn
+
+> Ba việc phụ thuộc server (POST body, hash, gate theme) có file riêng:
+> **`docs/VIEC-BEN-APP-LAT-VN.md`** — kèm bằng chứng probe và lệnh kiểm chứng lại.
 - [ ] `tecnativa/docker-socket-proxy` chắn trước docker.sock (§6). **Cần VPS test**: đụng vào
       đường cấp cert, sai là site mất HTTPS. Lưu ý acme-companion cần `POST`+`EXEC` để reload
       nginx-proxy nên phải tách 2 tầng quyền, không phải đổi 3 dòng
