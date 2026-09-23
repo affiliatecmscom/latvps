@@ -859,3 +859,22 @@ Cài bằng đúng lệnh người test, rồi `lat update`, `lat payload-sync`,
 
 > **Bài học:** bản vá đặt trong luồng cài chỉ cứu site cài MỚI. Nguồn gốc là demo thì phải vá trên
 > chính demo rồi dựng lại gói, không thì lỗi vẫn nằm đó để người dùng thấy trước tiên.
+
+---
+
+## 20. PHÁT HÀNH CHÍNH THỨC 3.20.0 (2026-09-24)
+
+`feat/lat-review` gộp vào `main` (fast-forward), `VERSION` = 3.20.0, tag `v3.20.0`.
+
+### Đường lùi cho học viên nếu bản mới lỗi
+
+```bash
+# quay về bản ổn định trước đó (ghim, lat update sẽ không kéo đi)
+LATVPS_REF=v3.19.0 curl -fsSL https://raw.githubusercontent.com/affiliatecmscom/latvps/main/latvps.sh | sudo bash
+
+# gỡ ghim, theo lại bản mới nhất
+git -C /opt/latvps checkout main && lat update
+```
+
+`main` ngay trước khi gộp được giữ ở nhánh `backup/main-3.19.0`. Plugin thì học viên tự hạ về bản cũ
+ngay trong wp-admin, vì trang tải về giữ đủ các bản đã phát hành.
