@@ -158,18 +158,6 @@ act_site_add() {
     cp -a "${WPF_ROOT}/assets/themes/lat-review-child" "$dir/wp-content/themes/" 2>/dev/null \
       || warn "Không copy được child theme (assets/themes/lat-review-child)."
 
-    # Tệp nạp cho các module trong lat-review/mu/. BẮT BUỘC chép ở đây, không trông vào việc
-    # plugin tự đặt lúc kích hoạt: bước nạp đè cơ sở dữ liệu demo bên dưới mang theo danh sách
-    # plugin đã bật sẵn, nên `wp plugin activate` thấy plugin đã bật và KHÔNG chạy hook kích
-    # hoạt. Thiếu tệp này thì site vẫn lên trang nhưng mất gần hết chức năng, mà không báo gì.
-    mkdir -p "$dir/wp-content/mu-plugins"
-    if [ -f "${WPF_ROOT}/payload/lat-review/plugins/lat-review/mu-loader/lat-review-loader.php" ]; then
-      cp "${WPF_ROOT}/payload/lat-review/plugins/lat-review/mu-loader/lat-review-loader.php" \
-         "$dir/wp-content/mu-plugins/lat-review-loader.php" \
-        || warn "Không copy được tệp nạp LAT Review."
-    else
-      warn "Payload thiếu mu-loader/lat-review-loader.php, các module sẽ KHÔNG chạy."
-    fi
   fi
 
   # plugin/theme cho affiliatecms
@@ -229,6 +217,23 @@ act_site_add() {
         || warn "Clone demo lỗi - site dùng cấu hình mặc định."
     else
       info "Bỏ qua clone demo - site bắt đầu với cấu hình mặc định."
+    fi
+
+    # Tệp nạp cho các module trong lat-review/mu/. BẮT BUỘC chép ở đây, không trông vào việc
+    # plugin tự đặt lúc kích hoạt: bước nạp đè cơ sở dữ liệu demo ở trên mang theo danh sách
+    # plugin đã bật sẵn, nên `wp plugin activate` thấy plugin đã bật và KHÔNG chạy hook kích
+    # hoạt. Thiếu tệp này thì site vẫn lên trang nhưng mất gần hết chức năng, mà không báo gì.
+    # Chép SAU `wp core install` và bước nạp đè: chép sớm hơn thì module chạy lúc CSDL còn trống
+    # và in ra hàng loạt dòng "WordPress database error" làm học viên tưởng cài hỏng.
+    if [ "$type" = "latreview" ]; then
+      mkdir -p "$dir/wp-content/mu-plugins"
+      if [ -f "${WPF_ROOT}/payload/lat-review/plugins/lat-review/mu-loader/lat-review-loader.php" ]; then
+        cp "${WPF_ROOT}/payload/lat-review/plugins/lat-review/mu-loader/lat-review-loader.php" \
+           "$dir/wp-content/mu-plugins/lat-review-loader.php" \
+          || warn "Không copy được tệp nạp LAT Review."
+      else
+        warn "Payload thiếu mu-loader/lat-review-loader.php, các module sẽ KHÔNG chạy."
+      fi
     fi
 
     # Kích hoạt theme CON + plugin (đảm bảo đúng trạng thái dù fresh hay sau clone).

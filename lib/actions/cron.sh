@@ -65,9 +65,18 @@ cron_install_for_site() {
   # Ai có key là POST /cron/work được -> đốt sạch budget AI của học viên.
   # Plugin AI chỉ đọc header từ 1.3.23; bản cũ chỉ hiểu query -> phải dò version, nếu không
   # cron sẽ 403 âm thầm và automation chết mà không ai biết (site vẫn chạy bình thường).
-  local ai_ver ai_auth
-  ai_ver="$(wp_run "$id" plugin get affiliatecms-ai --field=version 2>/dev/null | tr -d '[:space:]')"
-  if [ -n "$ai_ver" ] && ! version_gt "1.3.23" "$ai_ver"; then
+  # LAT Review (lat-review-ai) đọc header ngay từ 1.0.0, nên KHÔNG so với mốc 1.3.23 của bản cũ:
+  # số 1.0.0 nhỏ hơn mốc đó và sẽ đẩy nhầm về query string, tức khoá lại nằm trong access log.
+  local ai_ver ai_auth=""
+  if [ "$(site_get "$id" TYPE)" = "latreview" ]; then
+    ai_ver="$(wp_run "$id" plugin get lat-review-ai --field=version 2>/dev/null | tr -d '[:space:]')"
+    ai_auth="header"
+  else
+    ai_ver="$(wp_run "$id" plugin get affiliatecms-ai --field=version 2>/dev/null | tr -d '[:space:]')"
+  fi
+  if [ "$ai_auth" = "header" ]; then
+    :
+  elif [ -n "$ai_ver" ] && ! version_gt "1.3.23" "$ai_ver"; then
     ai_auth="header"
   else
     ai_auth="query"
@@ -108,7 +117,7 @@ _cron_install_site() {
   local id; id="$(_cron_pick_site)" || return 0
   [ -n "$id" ] || return 0
   local domain type; domain="$(site_get "$id" DOMAIN)"; type="$(site_get "$id" TYPE)"
-  if [ "$type" != "affiliatecms" ]; then
+  if [ "$type" != "affiliatecms" ] && [ "$type" != "latreview" ]; then
     ui_yesno "Site ${domain} không phải AffiliateCMS - cron này chỉ hợp cho AffiliateCMS. Vẫn cài?" || return 0
   fi
   info "Cài cron + lấy/sinh token của site..."
