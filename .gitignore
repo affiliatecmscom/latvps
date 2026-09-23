@@ -8,3 +8,4 @@ bin/wp-cli.phar
 payload/plugins/
 payload/themes/
 payload/mu-plugins/
+payload/lat-review/

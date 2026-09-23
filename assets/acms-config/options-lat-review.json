@@ -1,0 +1,379 @@
+{
+    "acms_admin_theme": "dark",
+    "acms_ai_default_template_enhance_asin": "tpl_t1JRW8HK",
+    "acms_ai_default_template_generate_review": "tpl_qmnWrzoD",
+    "acms_ai_templates": {
+        "tpl_t1JRW8HK": {
+            "id": "tpl_t1JRW8HK",
+            "name": "Default ASIN Enhancement",
+            "type": "enhance_asin",
+            "provider": "openrouter",
+            "model": "deepseek/deepseek-v4-flash",
+            "prompt": "Bạn là biên tập viên review sản phẩm cho LAT Review. Dựa HOÀN TOÀN vào dữ liệu sản phẩm dưới đây, viết tên gọn + mô tả ngắn + pros/cons trung thực cho THẺ SẢN PHẨM trong bài roundup. KHÔNG bịa thông tin ngoài data.\n\n=== SẢN PHẨM ===\nTitle (raw, dài): {{asin_title}}\nBrand: {{asin_brand}}\nCategory: {{asin_category}}\nRating: {{asin_rating}} ({{asin_reviews_count}} reviews)\nDescription: {{asin_description}}\nFeatures: {{asin_features}}\nSpecifications: {{asin_specifications}}\nTop Reviews: {{asin_top_reviews}}\n\n=== QUY TẮC ===\n1. Tiếng Anh Mỹ, giọng biên tập độc lập, chính xác, KHÔNG giật tít/marketing sáo rỗng.\n2. TUYỆT ĐỐI KHÔNG dùng \"test/tested/testing/hands-on/lab/we tested\". LAT Review review bằng nghiên cứu tổng hợp (specs, expert review consensus, verified buyer feedback), KHÔNG tự test vật lý. Dùng: review, evaluate, assess, based on.\n3. KHÔNG viết GIÁ bằng số (giá hiển thị riêng). Chỉ mô tả định tính nếu cần (budget/mid-range/premium).\n4. KHÔNG dùng em dash hay en dash. Dùng dấu phẩy hoặc chấm.\n5. custom_title (TÊN GỌN, kiểu Wirecutter): TỐI ĐA 50 KÝ TỰ. Viết lại tên raw dài thành tên NHẬN DIỆN ĐƯỢC: Brand + dòng/model + 1 thông số chính. BỎ dấu \"|\", marketing fluff, thông số thừa (màu, watt, \"W/Nonstick...\"). Ví dụ raw \"Ninja Air Fryer with Air Crisp | 5 QT ... | AF141\" -> \"Ninja AF141 5-Quart Air Fryer\". Giữ brand + model code nếu có.\n6. short_review VIẾT ĐA DẠNG, KHÔNG công thức cứng: ĐỪNG luôn mở đầu \"The {name} is a {category} that...\". Đổi góc theo loại sản phẩm + đối tượng dùng + điểm mạnh RIÊNG. Mỗi sản phẩm một giọng.\n7. PROS/CONS CHỈ VIẾT VỀ SẢN PHẨM, TUYỆT ĐỐI KHÔNG viết về DỮ LIỆU BẠN ĐANG CÓ HAY THIẾU. Đây là NGUYÊN TẮC chung, áp dụng cho MỌI cách diễn đạt, kể cả những cách chưa liệt kê dưới đây:\n   - CẤM mọi câu than phiền/meta-comment về việc thiếu review, thiếu feedback, thiếu thông tin, chưa được xác nhận, không có trong specs/listing... Ví dụ CẤM (và mọi biến thể tương đương): \"No/Zero/Limited/Few/Insufficient verified buyer/customer/user reviews available...\", \"Limited information on X...\", \"X not detailed/specified/provided in specifications...\", \"Cannot confirm X without...\", \"X remains unclear from the listing...\".\n   - Lý do: đó là nhận xét về QUÁ TRÌNH BIÊN TẬP của bạn (bạn không có đủ data), KHÔNG PHẢI nhược điểm hay ưu điểm THẬT của sản phẩm. Card hiển thị cho người đọc, họ không quan tâm bạn thiếu dữ liệu gì.\n   - Nếu không đủ căn cứ để viết đủ 3 pros hoặc 2-3 cons THẬT, hãy viết ÍT HƠN (kể cả 1 cái, hoặc mảng rỗng []) thay vì độn câu than phiền thiếu data cho đủ số. Số lượng ít nhưng thật LUÔN LUÔN tốt hơn số lượng đủ nhưng có câu rỗng.\n\nTRẢ VỀ DUY NHẤT JSON (không bọc ```):\n{\n  \"custom_title\": \"tên gọn <=50 ký tự (Brand + model + thông số chính), Wirecutter-style, không fluff\",\n  \"short_review\": \"2-3 câu mô tả cho thẻ card: sản phẩm là gì, điểm nổi bật thật, hợp với ai. Tự nhiên, đa dạng, bám thuộc tính thật, KHÔNG số giá.\",\n  \"pros\": [\"0-5 ưu điểm THẬT dựa trên features/specs/reviews, xem rule 7. Ít mà thật > nhiều mà rỗng.\"],\n  \"cons\": [\"0-3 nhược điểm THẬT dựa trên data thật, xem rule 7. Ít mà thật > nhiều mà rỗng.\"]\n}",
+            "temperature": 0.7,
+            "max_tokens": 1500,
+            "created_at": "2026-07-23 19:15:09",
+            "updated_at": "2026-09-10 00:54:27"
+        },
+        "tpl_qmnWrzoD": {
+            "id": "tpl_qmnWrzoD",
+            "name": "Default Review Generation",
+            "type": "generate_review",
+            "provider": "openrouter",
+            "model": "deepseek/deepseek-v4-flash",
+            "prompt": "You are an expert SEO content writer specializing in product reviews. You are rewriting an existing post with AI-enhanced content.\n\n## ⚠ CRITICAL: Dynamic Placeholder System (READ FIRST)\nThis website uses a dynamic placeholder system. Placeholders like %Keyword%, %year%, %month_text% are replaced with real-time data when visitors view the page. This keeps content always fresh and up-to-date without manual edits.\n\n**YOU MUST USE PLACEHOLDERS — NEVER HARDCODE THESE VALUES:**\n- Keyword/topic → use %Keyword% (Title Case) or %keyword% (lowercase) or %KEYWORD% (UPPER)\n- Year → use %year% — NEVER write \"2025\", \"2026\", or any year number\n- Month → use %month_text% or %month_short% — NEVER write \"January\", \"March\", etc.\n- Product count → use %product_count% — NEVER write \"10\", \"15\", etc.\n- Price range → use %price_range% — NEVER write \"$29.99 - $149.99\"\n- Brand list → use %brand_list%\n- Review count → use %review_count%\n- Min/max price → use %price_min%, %price_max%\n\n**WRONG (will be rejected):**\n- \"Best Laptops 2025\" → WRONG, hardcoded keyword and year\n- \"Top 10 Gaming PCs for March 2026\" → WRONG, hardcoded count, keyword, month, year\n- \"We reviewed 15 solar generators\" → WRONG, hardcoded count and keyword\n\n**CORRECT:**\n- \"Best %Keyword% %year%\" → CORRECT\n- \"Top %product_count% %Keyword% for %month_text% %year%\" → CORRECT\n- \"We reviewed %product_count% %keyword%\" → CORRECT\n\nThis rule applies to ALL output fields: title, excerpt, content, seo_title, seo_description.\n\n## ⚠ CRITICAL: Product Shortcode (NEVER OMIT — READ FIRST)\nYour \"content\" MUST contain this EXACT product shortcode, which renders the product comparison and is linked to the product database:\n\n{{shortcode_list}}\n\n- Copy that shortcode EXACTLY as shown above, wrapped as: <!-- wp:shortcode -->{{shortcode_list}}<!-- /wp:shortcode -->\n- NEVER replace the ASIN codes with a placeholder (e.g. asin=\"...\") and NEVER invent ASINs — use the exact shortcode shown above. An altered ASIN list deletes the real products from the database (irreversible data loss).\n- The \"content\" field WITHOUT this product shortcode will be REJECTED.\n\n## Target Information\n- **Main Keyword**: {{keyword}}\n- **Category**: {{category_name}}\n- **Number of Products**: {{products_count}}\n- **Price Range**: {{price_range}}\n- **Brands**: {{brand_list}}\n\n## Existing Post (current content on the website)\n**Current Title**: {{existing_title}}\n**Current Content**:\n{{existing_content}}\n\n## Products Data\n{{products}}\n\n## Related Posts for Internal Linking\n{{related_posts}}\n\n## Content Structure (MUST follow this order)\n\n### Section 1: Introduction (1-2 paragraphs)\n- Write an engaging opening about the product category and why readers need this guide\n- Use %Keyword%, %product_count%, %year%, %month_text% placeholders — not hardcoded values\n- Include 1 internal link to a related post or category page\n\n### Section 2: Product Shortcode (MUST include)\n- Insert the exact product shortcode, wrapped: <!-- wp:shortcode -->{{shortcode_list}}<!-- /wp:shortcode -->\n- This renders the interactive product comparison — use the exact ASINs shown, DO NOT replace them with placeholders or remove the shortcode\n\n### Section 3: Buying Guide (h2 heading using %Keyword%)\n- Write 4-6 key buying criteria as h3 subsections, each with 2-3 detailed paragraphs\n- Criteria should be specific to this product category (e.g., for solar generators: Battery Capacity, Output Power, Recharging Speed, Portability, Inverter Type)\n- Include practical tips, calculations, or comparison tables where helpful\n- Use HTML tables for specification comparisons when appropriate\n- Include 1-2 internal links naturally within the buying guide\n\n### Section 4: Why You Should Trust Us (h2)\n- 1-2 paragraphs explaining the review methodology\n- Focus on objectivity, data-driven analysis, and transparency\n- Do NOT claim to have physically tested products unless the data supports it\n\n### Section 5: Final Thoughts (h2)\n- 2-3 paragraphs with specific product recommendations from the reviewed products\n- Recommend a \"best overall\" pick, a \"best value\" pick, and a \"best for specific use\" pick\n- Reference actual product names and explain WHY each is recommended\n- Include 1-2 internal links to related reviews or category pages\n\n### Section 6: FAQs (h2)\n- 4-5 frequently asked questions relevant to this product category\n- Each FAQ as h3 with a detailed answer (2-4 sentences)\n- Questions should be natural, search-friendly queries people actually ask\n- Use %Keyword% and %year% in FAQ questions where natural (e.g., \"What is the best %keyword% in %year%?\")\n- Include 1 internal link in one of the FAQ answers\n\n## Internal Linking Rules\n- You MUST include 3-7 internal links total across all sections\n- ONLY use URLs provided in the \"Related Posts\" section above. Never invent or guess URLs\n- Use descriptive anchor text (not \"click here\" or \"read more\")\n- Mix both post links and category page links\n\n## Shortcode Rules (CRITICAL)\n- The product comparison shortcode to use is EXACTLY: {{shortcode_list}}\n- Use it character-for-character — never replace the ASIN codes with \"...\" and never invent attributes\n- Place the main product shortcode between Introduction and Buying Guide (Section 2)\n- Wrap in Gutenberg block: <!-- wp:shortcode -->{{shortcode_list}}<!-- /wp:shortcode -->\n\n## Writing Rules\n- Target 2000-3500 words total (excluding shortcodes)\n- Do not include prices or the number of reviews in the content\n- Do not use em-dash character in the content\n- Write in first-person plural (\"we\", \"our\") for trust sections, and mix with second-person (\"you\", \"your\") for guidance\n- Be specific and factual, referencing actual product names and features from the Products Data\n- Use %placeholder% for any dynamic data (keyword, year, month, counts) — never hardcode these\n\n## Gutenberg Block Format (CRITICAL)\nYou MUST wrap ALL HTML elements in WordPress Gutenberg block comments.\n\nBlock format rules:\n- Every paragraph: <!-- wp:paragraph --><p>text</p><!-- /wp:paragraph -->\n- Every heading: <!-- wp:heading --><h2>text</h2><!-- /wp:heading --> or <!-- wp:heading {\"level\":3} --><h3>text</h3><!-- /wp:heading -->\n- Every list: <!-- wp:list --><ul><li>item</li></ul><!-- /wp:list -->\n- Every table: <!-- wp:table --><figure class=\"wp-block-table\"><table><thead>...</thead><tbody>...</tbody></table></figure><!-- /wp:table -->\n- Every shortcode: <!-- wp:shortcode -->{{shortcode_list}}<!-- /wp:shortcode -->\n\nExample of correct output:\n<!-- wp:heading --><h2>%Keyword% Buying Guide for %year%</h2><!-- /wp:heading -->\n<!-- wp:paragraph --><p>We reviewed %product_count% of the best %keyword% in %month_text% %year%, featuring top brands like %brand_list%. Check out our <a href=\"https://example.com/related\">related guide</a>.</p><!-- /wp:paragraph -->\n<!-- wp:shortcode -->{{shortcode_list}}<!-- /wp:shortcode -->\n<!-- wp:heading {\"level\":3} --><h3>Battery Capacity</h3><!-- /wp:heading -->\n<!-- wp:paragraph --><p>When choosing %keyword%, battery capacity is one of the most important factors...</p><!-- /wp:paragraph -->\n\nIMPORTANT: Never use raw HTML without block wrappers. Every element MUST have its block comment pair.\n\n## Response Format\nReturn a JSON object with %placeholder% tokens in title, excerpt, seo_title, seo_description:\n{\n    \"title\": \"%product_count% Best %Keyword% of %year% - Expert Picks\",\n    \"excerpt\": \"Looking for the best %keyword%? We reviewed %product_count% top models in %month_text% %year% from %brand_list%.\",\n    \"content\": \"Full Gutenberg block-formatted content following the structure above\",\n    \"seo_title\": \"Best %Keyword% of %year% — %product_count% Expert Reviews\",\n    \"seo_description\": \"Find the best %keyword% of %year%. We compared %product_count% models with prices from %price_min% to %price_max%.\",\n    \"focus_keywords\": [\"keyword1\", \"keyword2\", \"keyword3\", \"keyword4\", \"keyword5\"],\n    \"internal_links_used\": [\"url1\", \"url2\", \"url3\"]\n}\n\nREMINDER: If your title, excerpt, or content contains any hardcoded year (2025, 2026...), hardcoded month name, or hardcoded keyword text instead of %placeholder%, your response will be REJECTED. Always use the %placeholder% system.\n\nFINAL CHECK — your \"content\" MUST contain the exact product shortcode {{shortcode_list}} (do not alter its ASIN codes). Omitting it causes irreversible loss of the linked products and will be REJECTED.\n\nRespond with valid JSON only, no markdown code fences.",
+            "temperature": 0.7,
+            "max_tokens": 8192,
+            "created_at": "2026-07-23 19:15:09",
+            "updated_at": "2026-07-23 19:15:09"
+        }
+    },
+    "acms_automation": {
+        "rescrape_enabled": false,
+        "rescrape_interval": 24,
+        "worker_count": 3,
+        "rescrape_provider": "creators_api"
+    },
+    "acms_general_settings": {
+        "default_provider": "creators_api",
+        "fallback_provider": "none",
+        "cache_duration": 24,
+        "auto_update": true,
+        "default_template": "list",
+        "show_price": true,
+        "show_rating": true,
+        "show_prime_badge": true,
+        "show_stock_status": true,
+        "rating_display_type": "score",
+        "score_label_text": "LAT Score",
+        "score_tooltip_text": "The LAT Score is our own rating from 0 to 10, based on performance, design and build, ease of use, and value. It reflects independent research and is never influenced by manufacturers, retailers, or affiliate commissions. <a href=\"/affiliate-disclosure/#lat-review-score\" rel=\"nofollow\">Learn more &rsaquo;</a>",
+        "show_update": true,
+        "update_tooltip_text": "Last updated on {date} / Affiliate links, product images, titles, and pricing data may be provided through the Amazon Creators API, Impact Integrations, CJ API, Awin API, FlexOffers API, or similar tools from our affiliate partners. Prices and availability are subject to change; the price and availability shown on the retailer's site at the time of purchase will apply.",
+        "enable_utm": false,
+        "utm_source": "",
+        "utm_medium": "affiliate",
+        "open_new_tab": true,
+        "nofollow_links": true,
+        "button_text": "View on Amazon",
+        "show_disclosure": true,
+        "disclosure_text": "As an Amazon Associate I earn from qualifying purchases.",
+        "post_disclosure_show": true,
+        "post_disclosure_text": "We independently review everything we recommend. When you buy through our links, we may earn a commission. As an Amazon Associate we earn from qualifying purchases.",
+        "post_disclosure_link_url": "",
+        "post_disclosure_link_text": "Learn more",
+        "post_disclosure_promo1": "",
+        "post_disclosure_promo2": "",
+        "affiliate_tag": "",
+        "custom_url_params": "linkCode=ogi&th=1&psc=1",
+        "enable_redirect": true,
+        "redirect_slug": "go",
+        "guest_post_enabled": false,
+        "guest_post_price": "",
+        "guest_post_turnaround": "",
+        "guest_post_niches": "",
+        "guest_post_contact": "",
+        "guest_post_exchange": false
+    },
+    "acms_post_types": {
+        "reviews": {
+            "enabled": false,
+            "slug": "reviews",
+            "menu_name": "Reviews",
+            "singular": "Review",
+            "plural": "Reviews",
+            "icon": "dashicons-star-half"
+        },
+        "deals": {
+            "enabled": false,
+            "slug": "deals",
+            "menu_name": "Deals",
+            "singular": "Deal",
+            "plural": "Deals",
+            "icon": "dashicons-tag"
+        },
+        "guides": {
+            "enabled": false,
+            "slug": "guides",
+            "menu_name": "Guides",
+            "singular": "Guide",
+            "plural": "Guides",
+            "icon": "dashicons-book"
+        }
+    },
+    "rank-math-options-general": {
+        "strip_category_base": "off",
+        "attachment_redirect_urls": "on",
+        "attachment_redirect_default": "https://iflmmo.lat.vn",
+        "nofollow_external_links": "off",
+        "nofollow_image_links": "off",
+        "new_window_external_links": "on",
+        "add_img_alt": "off",
+        "img_alt_format": " %filename%",
+        "add_img_title": "off",
+        "img_title_format": "%title% %count(title)%",
+        "breadcrumbs": "off",
+        "breadcrumbs_separator": "-",
+        "breadcrumbs_home": "on",
+        "breadcrumbs_home_label": "Home",
+        "breadcrumbs_archive_format": "Archives for %s",
+        "breadcrumbs_search_format": "Results for %s",
+        "breadcrumbs_404_label": "404 Error: page not found",
+        "breadcrumbs_ancestor_categories": "off",
+        "breadcrumbs_blog_page": "off",
+        "404_monitor_mode": "simple",
+        "404_monitor_limit": 100,
+        "404_monitor_ignore_query_parameters": "on",
+        "redirections_header_code": "301",
+        "redirections_debug": "off",
+        "console_caching_control": "90",
+        "console_email_reports": "on",
+        "console_email_frequency": "monthly",
+        "wc_remove_product_base": "off",
+        "wc_remove_category_base": "off",
+        "wc_remove_category_parent_slugs": "off",
+        "rss_before_content": "",
+        "rss_after_content": "",
+        "wc_remove_generator": "on",
+        "remove_shop_snippet_data": "on",
+        "frontend_seo_score": "off",
+        "frontend_seo_score_post_types": [
+            "post"
+        ],
+        "frontend_seo_score_position": "top",
+        "setup_mode": "advanced",
+        "content_ai_post_types": [
+            "post",
+            "page"
+        ],
+        "content_ai_country": "all",
+        "content_ai_tone": "Formal",
+        "content_ai_audience": "General Audience",
+        "content_ai_language": "US English",
+        "analytics_stats": "on",
+        "toc_block_title": "Table of Contents",
+        "toc_block_list_style": "ul",
+        "llms_post_types": [
+            "post",
+            "page"
+        ]
+    },
+    "rank-math-options-sitemap": {
+        "items_per_page": "500",
+        "include_images": "on",
+        "include_featured_image": "off",
+        "exclude_roles": [
+            "contributor",
+            "subscriber"
+        ],
+        "html_sitemap": "on",
+        "html_sitemap_display": "shortcode",
+        "html_sitemap_sort": "published",
+        "html_sitemap_seo_titles": "titles",
+        "authors_sitemap": "on",
+        "pt_post_sitemap": "on",
+        "pt_page_sitemap": "on",
+        "pt_attachment_sitemap": "off",
+        "pt_product_sitemap": false,
+        "pt_web-story_sitemap": false,
+        "tax_category_sitemap": "on",
+        "tax_post_tag_sitemap": "off",
+        "tax_post_format_sitemap": false,
+        "html_sitemap_shortcode": "[rank_math_html_sitemap]",
+        "html_sitemap_show_dates": "on",
+        "pt_post_html_sitemap": "on",
+        "pt_page_html_sitemap": "on",
+        "pt_attachment_html_sitemap": "off",
+        "tax_category_html_sitemap": "on",
+        "tax_category_include_empty": "off",
+        "tax_post_tag_html_sitemap": "off",
+        "tax_post_tag_include_empty": "off",
+        "pt_post_tag_sitemap": "off"
+    },
+    "rank-math-options-titles": {
+        "noindex_empty_taxonomies": "on",
+        "title_separator": "|",
+        "capitalize_titles": "off",
+        "twitter_card_type": "summary_large_image",
+        "knowledgegraph_type": "person",
+        "knowledgegraph_name": "LAT Review",
+        "website_name": "LAT Review",
+        "local_business_type": "Organization",
+        "local_address_format": "{address} {locality}, {region} {postalcode}",
+        "opening_hours": [
+            {
+                "day": "Monday",
+                "time": "09:00-17:00"
+            },
+            {
+                "day": "Tuesday",
+                "time": "09:00-17:00"
+            },
+            {
+                "day": "Wednesday",
+                "time": "09:00-17:00"
+            },
+            {
+                "day": "Thursday",
+                "time": "09:00-17:00"
+            },
+            {
+                "day": "Friday",
+                "time": "09:00-17:00"
+            },
+            {
+                "day": "Saturday",
+                "time": "09:00-17:00"
+            },
+            {
+                "day": "Sunday",
+                "time": "09:00-17:00"
+            }
+        ],
+        "opening_hours_format": "off",
+        "homepage_title": "%sitename% %page% %sep% %sitedesc%",
+        "homepage_description": "",
+        "homepage_custom_robots": "on",
+        "disable_author_archives": "off",
+        "url_author_base": "author",
+        "author_custom_robots": "off",
+        "author_robots": [
+            "index"
+        ],
+        "author_archive_title": "%name% %sep% %sitename% %page%",
+        "author_add_meta_box": "on",
+        "disable_date_archives": "on",
+        "date_archive_title": "%date% %page% %sep% %sitename%",
+        "search_title": "%search_query% %page% %sep% %sitename%",
+        "404_title": "Page Not Found %sep% %sitename%",
+        "date_archive_robots": [
+            "index"
+        ],
+        "noindex_search": "on",
+        "noindex_archive_subpages": "on",
+        "noindex_password_protected": "off",
+        "pt_download_default_rich_snippet": "product",
+        "author_slack_enhanced_sharing": "on",
+        "pt_post_title": "%title% %sep% %sitename%",
+        "pt_post_description": "%excerpt%",
+        "pt_post_robots": [
+            "index"
+        ],
+        "pt_post_custom_robots": "off",
+        "pt_post_default_rich_snippet": "article",
+        "pt_post_default_article_type": "BlogPosting",
+        "pt_post_default_snippet_name": "%seo_title%",
+        "pt_post_default_snippet_desc": "%seo_description%",
+        "pt_post_slack_enhanced_sharing": "on",
+        "pt_post_ls_use_fk": "titles",
+        "pt_post_add_meta_box": "on",
+        "pt_post_bulk_editing": "editing",
+        "pt_post_link_suggestions": "on",
+        "pt_post_primary_taxonomy": "category",
+        "pt_page_title": "%title% %sep% %sitename%",
+        "pt_page_description": "%excerpt%",
+        "pt_page_robots": [
+            "index"
+        ],
+        "pt_page_custom_robots": "off",
+        "pt_page_default_rich_snippet": "article",
+        "pt_page_default_article_type": "Article",
+        "pt_page_default_snippet_name": "%seo_title%",
+        "pt_page_default_snippet_desc": "%seo_description%",
+        "pt_page_slack_enhanced_sharing": "on",
+        "pt_page_ls_use_fk": "titles",
+        "pt_page_add_meta_box": "on",
+        "pt_page_bulk_editing": "editing",
+        "pt_page_link_suggestions": "on",
+        "pt_attachment_title": "%title% %sep% %sitename%",
+        "pt_attachment_description": "%excerpt%",
+        "pt_attachment_robots": [
+            "index"
+        ],
+        "pt_attachment_custom_robots": "off",
+        "pt_attachment_default_rich_snippet": "off",
+        "pt_attachment_default_article_type": "Article",
+        "pt_attachment_default_snippet_name": "%seo_title%",
+        "pt_attachment_default_snippet_desc": "%seo_description%",
+        "pt_attachment_slack_enhanced_sharing": "off",
+        "pt_attachment_add_meta_box": "off",
+        "pt_product_title": "%title% %sep% %sitename%",
+        "pt_product_description": "%excerpt%",
+        "pt_product_robots": [
+            "index"
+        ],
+        "pt_product_custom_robots": "off",
+        "pt_product_default_rich_snippet": "product",
+        "pt_product_default_article_type": "Article",
+        "pt_product_default_snippet_name": "%seo_title%",
+        "pt_product_default_snippet_desc": "%seo_description%",
+        "pt_product_slack_enhanced_sharing": "on",
+        "pt_product_ls_use_fk": "titles",
+        "pt_product_add_meta_box": "on",
+        "pt_product_bulk_editing": "editing",
+        "pt_product_link_suggestions": "on",
+        "pt_product_primary_taxonomy": "product_cat",
+        "pt_web-story_title": "%title% %sep% %sitename%",
+        "pt_web-story_description": "%excerpt%",
+        "pt_web-story_robots": [
+            "index"
+        ],
+        "pt_web-story_custom_robots": "off",
+        "pt_web-story_default_rich_snippet": "article",
+        "pt_web-story_default_article_type": "Article",
+        "pt_web-story_default_snippet_name": "%seo_title%",
+        "pt_web-story_default_snippet_desc": "%seo_description%",
+        "pt_web-story_slack_enhanced_sharing": "off",
+        "pt_web-story_add_meta_box": "off",
+        "tax_category_title": "%term% %sep% %sitename%",
+        "tax_category_robots": [
+            "index"
+        ],
+        "tax_category_add_meta_box": "on",
+        "tax_category_custom_robots": "off",
+        "tax_category_description": "%term_description%",
+        "tax_category_slack_enhanced_sharing": "on",
+        "tax_category_bulk_editing": 0,
+        "tax_post_tag_title": "%term% %sep% %sitename%",
+        "tax_post_tag_robots": [
+            "index"
+        ],
+        "tax_post_tag_add_meta_box": "off",
+        "tax_post_tag_custom_robots": "off",
+        "tax_post_tag_description": "%term_description%",
+        "tax_post_tag_slack_enhanced_sharing": "on",
+        "tax_post_tag_bulk_editing": 0,
+        "tax_post_format_title": "%term% %sep% %sitename%",
+        "tax_post_format_robots": [
+            "index"
+        ],
+        "tax_post_format_add_meta_box": "off",
+        "tax_post_format_custom_robots": "off",
+        "tax_post_format_description": "%term_description%",
+        "tax_post_format_slack_enhanced_sharing": "on",
+        "tax_post_format_bulk_editing": 0,
+        "remove_product_cat_snippet_data": "on",
+        "remove_product_tag_snippet_data": "on",
+        "homepage_robots": [
+            "index",
+            "follow"
+        ],
+        "open_graph_image": "https://iflmmo.lat.vn/wp-content/uploads/og-site-default.webp",
+        "open_graph_image_id": 33197,
+        "homepage_facebook_image": "https://iflmmo.lat.vn/wp-content/uploads/og-site-default.webp",
+        "homepage_facebook_image_id": 33197
+    },
+    "rank_math_modules": {
+        "1": "analytics",
+        "2": "seo-analysis",
+        "4": "rich-snippet",
+        "5": "woocommerce",
+        "6": "buddypress",
+        "7": "bbpress",
+        "8": "acf",
+        "9": "web-stories",
+        "13": "redirections",
+        "14": "llms-txt",
+        "15": "sitemap"
+    },
+    "lat_review_coupons_enabled": 1
+}

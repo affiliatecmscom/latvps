@@ -1,0 +1,144 @@
+/*
+ * Compare feature (LAT Review)
+ * - Trang /compare/?ids=... : bảng so sánh sản phẩm (.acms-cmp__*)
+ * - Trên single post: checkbox "Compare" chèn vào product card (.acms-cmp-check) + thanh gom nổi (.acms-cmp-bar)
+ * Chỉ dùng token theme (--color-*), KHÔNG hardcode màu. File load conditional (mu-plugin acms-compare.php).
+ */
+
+/* ============================ Trang So Sánh ============================ */
+/* .acms-cmp dùng CHUNG element với .container -> chỉ set top/bottom, KHÔNG dùng
+   shorthand padding (sẽ zero padding ngang của .container -> nội dung sát lề). */
+.acms-cmp { padding-top: 20px; padding-bottom: 56px; }
+
+.acms-cmp__empty { text-align: center; padding: 60px 0; }
+.acms-cmp__empty-title { font-size: var(--text-3xl); font-weight: var(--font-bold); margin: 0 0 12px; }
+.acms-cmp__empty p { color: var(--color-text-secondary); max-width: 520px; margin: 0 auto 20px; line-height: 1.6; }
+
+.acms-cmp__header { margin-bottom: 18px; }
+.acms-cmp__subtitle { margin: 8px 0 0; color: var(--color-text-secondary); font-size: 15px; }
+
+.acms-cmp__scroll { overflow-x: auto; border: 1px solid var(--color-border); }
+.acms-cmp__table { width: 100%; border-collapse: collapse; background: var(--color-surface); }
+
+.acms-cmp__row { border-bottom: 1px solid var(--color-border-subtle); }
+.acms-cmp__row:last-child { border-bottom: 0; }
+
+.acms-cmp__label {
+  width: 132px; min-width: 132px; text-align: left; vertical-align: top;
+  padding: 14px 16px; background: var(--color-bg);
+  font-size: 13px; font-weight: 700; color: var(--color-text-secondary);
+  white-space: nowrap; border-right: 1px solid var(--color-border-subtle);
+}
+.acms-cmp__cell {
+  vertical-align: top; text-align: center; padding: 14px 16px;
+  min-width: 190px; border-right: 1px solid var(--color-border-subtle);
+}
+.acms-cmp__cell:last-child { border-right: 0; }
+.acms-cmp__cell.is-best { background: var(--color-primary-light); }
+
+/* Hàng đầu: ảnh + tên + pick badge */
+.acms-cmp__cell--head { padding-top: 18px; }
+.acms-cmp__pick { display: inline-block; margin-bottom: 8px; }
+.acms-cmp__thumb { display: block; width: 120px; height: 120px; margin: 0 auto 10px; background: var(--color-bg); overflow: hidden; }
+.acms-cmp__thumb img { width: 100%; height: 100%; object-fit: contain; }
+.acms-cmp__name { display: block; font-size: 14px; font-weight: 700; line-height: 1.35; color: var(--color-text); text-decoration: none; }
+.acms-cmp__name:hover { color: var(--color-primary); }
+
+/* Giá */
+.acms-cmp__price { display: block; font-size: 18px; font-weight: 800; color: var(--color-text); }
+.acms-cmp__was { display: inline-block; margin-top: 3px; font-size: 12px; color: var(--color-text-muted); text-decoration: line-through; }
+.acms-cmp__off { display: inline-block; margin-left: 6px; font-size: 11px; font-weight: 700; color: #fff; background: var(--color-primary); border-radius: 4px; padding: 1px 6px; }
+.acms-cmp__win { display: block; margin-top: 5px; font-size: 11px; font-weight: 700; color: var(--color-success); }
+
+/* Pros / Cons */
+.acms-cmp__list { list-style: none; margin: 0; padding: 0; text-align: left; }
+.acms-cmp__list li { position: relative; padding-left: 20px; font-size: 13px; line-height: 1.5; margin-bottom: 5px; color: var(--color-text-secondary); }
+.acms-cmp__list li::before { position: absolute; left: 0; top: 0; font-size: 13px; font-weight: 700; }
+.acms-cmp__list--pro li::before { content: "\2713"; color: var(--color-success); }
+.acms-cmp__list--con li::before { content: "\2715"; color: var(--color-error); }
+
+/* Availability */
+.acms-cmp__yes { color: var(--color-success); font-weight: 700; font-size: 13px; }
+.acms-cmp__no { color: var(--color-error); font-weight: 700; font-size: 13px; }
+.acms-cmp__prime { display: inline-block; margin-left: 6px; font-size: 11px; font-weight: 700; color: var(--color-primary); }
+.acms-cmp__na { color: var(--color-text-muted); font-size: 14px; }
+
+/* Score + Price info (icon ⓘ tooltip, giống ASIN table) */
+.acms-cmp .acms-list__score-wrapper { justify-content: center; }
+.acms-cmp__priceinfo { display: inline-flex; align-items: center; margin-top: 6px; color: var(--color-text-muted); cursor: help; }
+.acms-cmp__priceinfo i { font-size: 14px; }
+.acms-cmp__priceinfo:focus-visible { outline: 2px solid var(--color-primary); border-radius: 50%; }
+
+/* Bảng nằm trong .acms-cmp__scroll (overflow-x auto -> clip cả 2 trục), nên 2 tooltip
+   absolute mặc định sẽ bị CẮT. Đổi sang position:fixed (toast giữa-dưới màn hình) để
+   hiện ĐẦY ĐỦ, không bị che/ẩn, cả desktop lẫn mobile. Bỏ mũi tên (không còn anchor). */
+.acms-cmp .acms-list__score-tooltip,
+.acms-cmp .acms-list__update-tooltip {
+  position: fixed; left: 50%; right: auto; top: auto; bottom: 20px;
+  transform: translateX(-50%);
+  width: min(360px, 92vw); max-width: 92vw;
+  z-index: 1100;
+}
+.acms-cmp .acms-list__score-tooltip::after,
+.acms-cmp .acms-list__score-tooltip::before,
+.acms-cmp .acms-list__update-tooltip::after { display: none; }
+
+/* Bật tooltip: hover (desktop) + focus/focus-within (tap mobile chắc chắn). Giữ translateX. */
+.acms-cmp .acms-list__score-wrapper:hover .acms-list__score-tooltip,
+.acms-cmp .acms-list__score-wrapper:focus-within .acms-list__score-tooltip,
+.acms-cmp .acms-list__score-info:focus + .acms-list__score-tooltip,
+.acms-cmp .acms-list__update:hover .acms-list__update-tooltip,
+.acms-cmp .acms-list__update:focus .acms-list__update-tooltip,
+.acms-cmp .acms-list__update:focus-within .acms-list__update-tooltip {
+  opacity: 1; visibility: visible; pointer-events: auto; transform: translateX(-50%);
+}
+
+/* Update tooltip (LAT Review .acms-tooltip--pf) dưới giá trong bảng compare: cùng cơ chế
+   fixed toast giữa-dưới màn hình để KHÔNG bị .acms-cmp__scroll cắt. Hiện khi tap (is-active) + hover. */
+.acms-cmp .acms-list__update .acms-tooltip--pf .acms-tooltip__content {
+  position: fixed; left: 50%; right: auto; top: auto; bottom: 20px;
+  transform: translateX(-50%); width: min(360px, 92vw); max-width: 92vw; z-index: 1100;
+}
+.acms-cmp .acms-list__update { display: flex; justify-content: center; margin-top: 8px; }
+
+.acms-cmp__row--buy .acms-cmp__cell { padding: 16px; }
+.acms-cmp__buy { width: 100%; }
+
+.acms-cmp__note { margin: 16px 0 0; font-size: 12px; color: var(--color-text-muted); line-height: 1.5; }
+
+@media (max-width: 600px) {
+  .acms-cmp__label { width: 96px; min-width: 96px; padding: 12px; font-size: 12px; }
+  .acms-cmp__cell { min-width: 150px; padding: 12px; }
+  .acms-cmp__thumb { width: 90px; height: 90px; }
+}
+
+/* ================= Checkbox "Compare" trên product card (single post) ================= */
+.acms-cmp-check {
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  padding: 7px 10px; border: 1px solid var(--color-border); border-radius: 6px;
+  background: var(--color-surface); color: var(--color-text-secondary);
+  font-size: 12px; font-weight: 600; cursor: pointer; user-select: none;
+}
+.acms-cmp-check:hover { border-color: var(--color-primary); color: var(--color-primary); }
+.acms-cmp-check input { width: 15px; height: 15px; margin: 0; accent-color: var(--color-primary); cursor: pointer; }
+.acms-cmp-check input:disabled { cursor: not-allowed; }
+.acms-list__item.is-cmp-selected { outline: 2px solid var(--color-primary); outline-offset: -1px; }
+
+/* Thanh gom nổi dưới màn hình */
+.acms-cmp-bar {
+  position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%);
+  z-index: 1000; display: flex; align-items: center; gap: 14px;
+  padding: 10px 12px 10px 20px; border-radius: 999px;
+  background: var(--color-surface); border: 1px solid var(--color-border);
+  box-shadow: 0 8px 28px rgba(28, 27, 37, 0.18);
+}
+.acms-cmp-bar[hidden] { display: none; }
+.acms-cmp-bar__count { font-size: 14px; font-weight: 700; color: var(--color-text); white-space: nowrap; }
+.acms-cmp-bar__go { padding: 8px 20px; }
+.acms-cmp-bar__go:disabled { opacity: 0.5; cursor: not-allowed; }
+.acms-cmp-bar__clear { border: 0; background: none; color: var(--color-text-muted); font-size: 13px; font-weight: 600; cursor: pointer; padding: 6px 8px; }
+.acms-cmp-bar__clear:hover { color: var(--color-primary); }
+
+@media (max-width: 600px) {
+  .acms-cmp-bar { left: 12px; right: 12px; transform: none; justify-content: space-between; }
+}

@@ -312,7 +312,9 @@ assert_ports_private() {
 # Import config AffiliateCMS + Rank Math (giống demo) vào site. Bundle đã strip license/API/secret.
 # Dùng wp eval + update_option (serialize đúng). Chỉ áp cho site affiliatecms.
 acms_import_config() {
-  local id="$1" f="${WPF_ROOT}/assets/acms-config/options.json"
+  local id="$1" variant="${2:-affiliatecms}"
+  local f="${WPF_ROOT}/assets/acms-config/options.json"
+  [ "$variant" = "latreview" ] && f="${WPF_ROOT}/assets/acms-config/options-lat-review.json"
   [ -f "$f" ] || { info "Không có config bundle - bỏ qua import (dùng default plugin)."; return 0; }
   docker cp "$f" "${id}_php:/tmp/acms-config.json" >/dev/null 2>&1 || { warn "Copy config vào container lỗi."; return 1; }
   wp_run "$id" eval 'foreach((array)json_decode(file_get_contents("/tmp/acms-config.json"),true) as $k=>$v){ update_option($k,$v); }' >/dev/null 2>&1 \
@@ -325,12 +327,16 @@ acms_import_config() {
 # Tải BUNDLE nội dung demo (DB+uploads đã sanitize) từ app.lat.vn, gated theo license.
 # Trả về đường dẫn thư mục đã giải nén (chứa database.sql + uploads/ + bundle.info) qua stdout.
 fetch_demo_bundle() {
-  local key="$1" outdir="$2"
+  local key="$1" outdir="$2" variant="${3:-affiliatecms}"
   [ -n "$key" ] || { warn "Cần license để tải bundle demo."; return 1; }
   ensure_unzip >/dev/null 2>&1 || true
+  # Ban moi di ROUTE RIENG. Duong cu giu nguyen tung ky tu, nen ban `lat` cu tren may hoc vien
+  # goi nhu truoc van nhan dung bo cu.
+  local route="/update/demo/download?license_key=${key}"
+  [ "$variant" = "latreview" ] && route="/update/demo/lat-review/download?license_key=${key}"
   local tmp; tmp="$(mktemp -d)"
   if ! curl -fsS --max-time 300 -o "${tmp}/demo-bundle.tar.gz" \
-      "${LICENSE_SERVER}/update/demo/download?license_key=${key}"; then
+      "${LICENSE_SERVER}${route}"; then
     warn "Tải bundle demo thất bại (license còn hạn? server có bundle chưa?)."; rm -rf "$tmp"; return 1
   fi
   mkdir -p "$outdir"
@@ -346,12 +352,13 @@ fetch_demo_bundle() {
 # đổi URL demo -> canon_host. Cần license (gated tải bundle).
 acms_import_demo_content() {
   local id="$1" canon_host="$2" admin_user="$3" admin_pass="$4" admin_email="$5" license="$6"
+  local variant="${7:-affiliatecms}"   # khong truyen = ban cu
   [ -n "$license" ] || { warn "Chưa có license - bỏ qua nội dung demo (gated)."; return 1; }
   local dir; dir="$(site_dir "$id")"
 
   local ex; ex="$(mktemp -d)"
   info "Tải bundle nội dung demo từ app.lat.vn..."
-  fetch_demo_bundle "$license" "$ex" || { rm -rf "$ex"; return 1; }
+  fetch_demo_bundle "$license" "$ex" "$variant" || { rm -rf "$ex"; return 1; }
 
   # DB ops dùng MARIADB_PASSWORD TRONG container (không đưa mật khẩu lên dòng lệnh host -> tránh lộ qua ps).
   info "Nạp database demo (đè) ..."
@@ -455,6 +462,14 @@ ensure_unzip() {
 
 # Payload đã có đủ plugin/theme chính chưa?
 payload_present() {
+  # Khong truyen gi = ban cu, y nguyen hanh vi truoc day.
+  local variant="${1:-affiliatecms}"
+  if [ "$variant" = "latreview" ]; then
+    [ -d "${WPF_ROOT}/payload/lat-review/plugins/lat-review" ] \
+      && [ -d "${WPF_ROOT}/payload/lat-review/plugins/lat-review-ai" ] \
+      && [ -d "${WPF_ROOT}/payload/lat-review/themes/lat-theme" ]
+    return $?
+  fi
   [ -d "${WPF_ROOT}/payload/plugins/affiliatecms-pro" ] \
     && [ -d "${WPF_ROOT}/payload/plugins/affiliatecms-ai" ] \
     && [ -d "${WPF_ROOT}/payload/themes/affiliateCMS-theme" ]
@@ -463,9 +478,37 @@ payload_present() {
 # Tải payload mới nhất từ license server. Cần license active. Trả 0 nếu đủ.
 # Plugin: gated (plugin= + license_key=). Theme: chỉ slug=. Mỗi zip có 1 thư mục gốc đúng tên.
 fetch_payload() {
-  local key="$1"
+  local key="$1" variant="${2:-affiliatecms}"
   [ -n "$key" ] || { warn "Cần license để tải payload."; return 1; }
   ensure_unzip || { warn "Thiếu unzip - không giải nén được payload."; return 1; }
+
+  # Ban LAT Review nam o THU MUC RIENG. Bat buoc tach, vi site_add rsync nguyen thu muc
+  # payload/plugins/ sang site, do chung mot cho la moi site nhan ca hai bo plugin.
+  if [ "$variant" = "latreview" ]; then
+    local lp="${WPF_ROOT}/payload/lat-review" ltmp; ltmp="$(mktemp -d)"
+    mkdir -p "${lp}/plugins" "${lp}/themes"
+    local lrc=0 x
+    for x in lat-review lat-review-ai; do
+      info "Tải plugin ${x} từ app.lat.vn..."
+      if curl -fsS --max-time 120 -o "${ltmp}/${x}.zip" \
+          "${LICENSE_SERVER}/update/download?plugin=${x}&license_key=${key}&domain=factory"; then
+        unzip_replace_dir "${ltmp}/${x}.zip" "${lp}/plugins" "$x" || lrc=1
+      else
+        warn "Tải ${x} thất bại (license còn hạn?)."; lrc=1
+      fi
+    done
+    info "Tải theme lat-theme..."
+    if curl -fsS --max-time 120 -o "${ltmp}/lat-theme.zip" \
+        "${LICENSE_SERVER}/update/theme/download?slug=lat-theme"; then
+      unzip_replace_dir "${ltmp}/lat-theme.zip" "${lp}/themes" "lat-theme" || lrc=1
+    else
+      warn "Tải lat-theme thất bại."; lrc=1
+    fi
+    rm -rf "$ltmp"
+    chmod -R u+rwX,go+rX "$lp" 2>/dev/null || true
+    return $lrc
+  fi
+
   local payload="${WPF_ROOT}/payload" tmp; tmp="$(mktemp -d)"
   mkdir -p "${payload}/plugins" "${payload}/themes"
   local rc=0 p

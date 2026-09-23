@@ -12,7 +12,7 @@ act_site_add() {
   # thoát ngay với lỗi bash khó hiểu (vd gõ `lat add foo.com --type`).
   while [ $# -gt 0 ]; do
     case "$1" in
-      --type)    [ $# -ge 2 ] || { warn "--type cần giá trị (affiliatecms|vanilla)."; return 1; }; type="$2"; shift 2;;
+      --type)    [ $# -ge 2 ] || { warn "--type cần giá trị (latreview|affiliatecms|vanilla)."; return 1; }; type="$2"; shift 2;;
       --ssl)     [ $# -ge 2 ] || { warn "--ssl cần giá trị (cloudflare|auto|origin)."; return 1; }; ssl="$2"; shift 2;;
       --email)   [ $# -ge 2 ] || { warn "--email cần giá trị."; return 1; }; email="$2"; shift 2;;
       --license) [ $# -ge 2 ] || { warn "--license cần giá trị."; return 1; }; license="$2"; shift 2;;
@@ -35,12 +35,13 @@ act_site_add() {
   # --- Bước 2: loại site ---
   if [ -z "$type" ]; then
     type="$(ui_menu "Loại site cho ${domain}" \
-      affiliatecms "WordPress + AffiliateCMS (khuyến nghị)" \
+      latreview    "WordPress + LAT Review (khuyến nghị)" \
+      affiliatecms "WordPress + AffiliateCMS (bản cũ)" \
       vanilla      "WordPress thường (không AffiliateCMS)")" || return 1
   fi
 
   # --- Lazy license nếu affiliatecms ---
-  if [ "$type" = "affiliatecms" ] && [ -z "$license" ]; then
+  if { [ "$type" = "affiliatecms" ] || [ "$type" = "latreview" ]; } && [ -z "$license" ]; then
     if ! license="$(resolve_license_for_site)"; then
       local pick
       pick="$(ui_menu "Chưa có license hợp lệ. Tiếp theo?" \
@@ -134,13 +135,42 @@ act_site_add() {
   site_set "$id" DB "mariadb"
   site_set "$id" REDIS "yes"
   site_set "$id" ADMIN_EMAIL "$email"
-  [ "$type" = "affiliatecms" ] && site_set "$id" LICENSE_KEY "$license"
+  { [ "$type" = "affiliatecms" ] || [ "$type" = "latreview" ]; } && site_set "$id" LICENSE_KEY "$license"
   site_link_set "$id" "$domain"   # /opt/sites/<domain> -> /opt/sites/<id>
 
   # mu-plugin proxy-ssl (WP sau proxy nhận biết HTTPS)
   mkdir -p "$dir/wp-content/mu-plugins"
   cp "${WPF_ROOT}/assets/mu-plugins/proxy-ssl.php" "$dir/wp-content/mu-plugins/proxy-ssl.php" 2>/dev/null || true
   cp "${WPF_ROOT}/assets/mu-plugins/latvps-hardening.php" "$dir/wp-content/mu-plugins/latvps-hardening.php" 2>/dev/null || true
+
+  # plugin/theme cho LAT Review (ban moi). Lay tu payload/lat-review/, hoan toan tach khoi
+  # payload cua ban cu, nen mot may chay ca hai loai site cung khong lan bo plugin.
+  if [ "$type" = "latreview" ]; then
+    if ! payload_present latreview; then
+      [ -n "$license" ] || { warn "Chưa có payload LAT Review và chưa có license."; _add_rollback; return 1; }
+      info "Tải payload LAT Review từ app.lat.vn..."
+      fetch_payload "$license" latreview || { _add_rollback; return 1; }
+    fi
+    info "Copy plugin/theme LAT Review..."
+    mkdir -p "$dir/wp-content/plugins" "$dir/wp-content/themes"
+    rsync -a "${WPF_ROOT}/payload/lat-review/plugins/" "$dir/wp-content/plugins/" || { _add_rollback; return 1; }
+    rsync -a "${WPF_ROOT}/payload/lat-review/themes/"  "$dir/wp-content/themes/"  || { _add_rollback; return 1; }
+    cp -a "${WPF_ROOT}/assets/themes/lat-review-child" "$dir/wp-content/themes/" 2>/dev/null \
+      || warn "Không copy được child theme (assets/themes/lat-review-child)."
+
+    # Tệp nạp cho các module trong lat-review/mu/. BẮT BUỘC chép ở đây, không trông vào việc
+    # plugin tự đặt lúc kích hoạt: bước nạp đè cơ sở dữ liệu demo bên dưới mang theo danh sách
+    # plugin đã bật sẵn, nên `wp plugin activate` thấy plugin đã bật và KHÔNG chạy hook kích
+    # hoạt. Thiếu tệp này thì site vẫn lên trang nhưng mất gần hết chức năng, mà không báo gì.
+    mkdir -p "$dir/wp-content/mu-plugins"
+    if [ -f "${WPF_ROOT}/payload/lat-review/plugins/lat-review/mu-loader/lat-review-loader.php" ]; then
+      cp "${WPF_ROOT}/payload/lat-review/plugins/lat-review/mu-loader/lat-review-loader.php" \
+         "$dir/wp-content/mu-plugins/lat-review-loader.php" \
+        || warn "Không copy được tệp nạp LAT Review."
+    else
+      warn "Payload thiếu mu-loader/lat-review-loader.php, các module sẽ KHÔNG chạy."
+    fi
+  fi
 
   # plugin/theme cho affiliatecms
   if [ "$type" = "affiliatecms" ]; then
@@ -185,7 +215,7 @@ act_site_add() {
   # Bỏ Hello Dolly (plugin mặc định WP, thừa).
   wp_run "$id" plugin delete hello >/dev/null 2>&1 || true
 
-  if [ "$type" = "affiliatecms" ]; then
+  if [ "$type" = "affiliatecms" ] || [ "$type" = "latreview" ]; then
     # Plugin PHỤ THUỘC (giống demo): Rank Math + Classic Editor. Cần FILE sẵn cho cả fresh lẫn clone
     # (dump demo đánh dấu chúng active -> thiếu file sẽ bị WP tự deactivate).
     info "Cài plugin phụ thuộc (Rank Math SEO + Classic Editor)..."
@@ -195,29 +225,46 @@ act_site_add() {
     # Nội dung + CẤU HÌNH giống demo (FULL CLONE, mặc định Có): sản phẩm, từ khóa, logo, sidebar,
     # widget, bài, trang, menu, ảnh. Đè DB site bằng bản demo (đã sanitize secret). Cần license.
     if [ -n "$license" ] && ui_yesno "Import nội dung + cấu hình giống demo (sản phẩm, từ khóa, logo, sidebar, bài, ảnh)?" yes; then
-      acms_import_demo_content "$id" "$canon_host" "$admin_user" "$admin_pass" "$email" "$license" \
+      acms_import_demo_content "$id" "$canon_host" "$admin_user" "$admin_pass" "$email" "$license" "$type" \
         || warn "Clone demo lỗi - site dùng cấu hình mặc định."
     else
       info "Bỏ qua clone demo - site bắt đầu với cấu hình mặc định."
     fi
 
     # Kích hoạt theme CON + plugin (đảm bảo đúng trạng thái dù fresh hay sau clone).
-    info "Kích hoạt theme CON (giống demo) + plugin AffiliateCMS..."
-    wp_run "$id" theme activate affiliateCMS-Child >/dev/null 2>&1 \
-      || wp_run "$id" theme activate affiliateCMS-theme >/dev/null 2>&1 \
+    # Tên theme và plugin KHÁC nhau giữa hai bản, nên chọn theo loại site. Ghi cứng tên bản cũ
+    # thì với site LAT Review lệnh sẽ thất bại, và site chỉ chạy đúng nhờ trạng thái sẵn trong
+    # bản dump, tức đúng do may chứ không do thiết kế.
+    local _child _parent _plugins
+    if [ "$type" = "latreview" ]; then
+      _child="lat-review-child"; _parent="lat-theme"; _plugins="lat-review lat-review-ai"
+    else
+      _child="affiliateCMS-Child"; _parent="affiliateCMS-theme"; _plugins="affiliatecms-pro affiliatecms-ai"
+    fi
+
+    info "Kích hoạt theme CON (giống demo) + plugin..."
+    wp_run "$id" theme activate "$_child" >/dev/null 2>&1 \
+      || wp_run "$id" theme activate "$_parent" >/dev/null 2>&1 \
       || warn "Chưa activate được theme."
     # Xoá theme mặc định của WordPress core. Giữ lại cha affiliateCMS-theme (child cần kế thừa).
     local _t
     for _t in $(wp_run "$id" theme list --status=inactive --field=name 2>/dev/null); do
-      [ "$_t" = "affiliateCMS-theme" ] && continue
+      [ "$_t" = "$_parent" ] && continue
       wp_run "$id" theme delete "$_t" >/dev/null 2>&1 || true
     done
-    wp_run "$id" plugin activate affiliatecms-pro affiliatecms-ai seo-by-rank-math classic-editor >/dev/null 2>&1 \
+    wp_run "$id" plugin activate $_plugins seo-by-rank-math classic-editor >/dev/null 2>&1 \
       || warn "Chưa activate được plugin."
+
+    # Nạp lại luật rewrite. BẮT BUỘC làm SAU bước nạp đè cơ sở dữ liệu: bản dump mang theo luật
+    # rewrite của demo, nên nếu không nạp lại thì trang danh mục trả 404 hoặc bị đẩy sang
+    # /wp-admin/ và người đọc bị đòi đăng nhập. Đặt cấu trúc permalink ở trên không cứu được, vì
+    # nó chạy TRƯỚC khi cơ sở dữ liệu bị đè.
+    info "Nạp lại luật đường dẫn..."
+    wp_run "$id" rewrite flush --hard >/dev/null 2>&1 || warn "Chưa nạp lại được luật đường dẫn."
 
     # Cấu hình AffiliateCMS sanitized (general_settings sạch affiliate_tag, rank math) - đè lên clone.
     info "Áp cấu hình AffiliateCMS (đã strip secret)..."
-    acms_import_config "$id"
+    acms_import_config "$id" "$type"
 
     # License: gọi ĐÚNG hàm activate của plugin (LicenseGuard::activate) -> set acms_license_key +
     # acms_license_status=active + acms_activated_domain + ai_enabled (có verify chữ ký server).

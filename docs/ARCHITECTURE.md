@@ -353,6 +353,13 @@ Nguồn: rà soát nội bộ + [issue #1](https://github.com/affiliatecmscom/la
 - [ ] `healthcheck:` cho php/web — chưa làm vì `wordpress:fpm-alpine` không có sẵn lệnh kiểm
       fpm đáng tin (busybox `nc -z` không chắc có), thà không có còn hơn báo hỏng nhầm
 
+- [ ] Hai biến thể demo song song (bundle iflmmo + bundle kiểu BestProducts). Plan đầy đủ,
+      gồm hiện trạng đã đo và 7 giai đoạn, ở [`QUY-TRINH-DEMO-SONG-SONG.md`](QUY-TRINH-DEMO-SONG-SONG.md)
+
+- [ ] Tích hợp phiên bản LAT Review vào LATVPS, học viên chọn bản lúc `lat add` (chặng 2).
+      Bản cũ để nguyên. Plan đầy đủ, gồm 9 đường có thể chạm tới site cũ, ở
+      [`QUY-TRINH-TICH-HOP-LAT-REVIEW.md`](QUY-TRINH-TICH-HOP-LAT-REVIEW.md)
+
 ### Sau đó — v3.20.0 "chống mất dữ liệu"
 - [ ] Cron `lat backup all` hằng ngày, cài sẵn trong `lat setup`
 - [ ] Đích backup offsite tuỳ chọn (rclone → S3/Backblaze) — mất nguyên VPS là mất cả backup

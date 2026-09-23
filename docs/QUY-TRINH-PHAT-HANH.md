@@ -63,6 +63,12 @@ Muốn chắc hơn nữa thì tải zip về và kiểm tra header Version bên 
 
 ## 4. Phát hành nội dung demo (DB + uploads)
 
+> Mục này mô tả hệ thống **một bundle duy nhất** đang chạy. Kế hoạch tách thành hai biến
+> thể song song (`iflmmo.affiliatecms.com` và `iflmmo.lat.vn`) nằm ở
+> [`QUY-TRINH-DEMO-SONG-SONG.md`](QUY-TRINH-DEMO-SONG-SONG.md), chưa triển khai.
+> Cách phát hành phiên bản LAT Review như một mã sản phẩm riêng, không chạm bản cũ, nằm ở
+> [`QUY-TRINH-TICH-HOP-LAT-REVIEW.md`](QUY-TRINH-TICH-HOP-LAT-REVIEW.md). Theme cha cố ý KHÔNG phát hành, lý do ở §3 tệp đó.
+
 **Chỉ cần làm khi NỘI DUNG demo đổi** (bài, trang, sản phẩm, logo, sidebar, menu).
 Sửa code plugin **không** liên quan tới bundle: bundle chỉ chứa DB + uploads, plugin đi đường payload.
 

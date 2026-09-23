@@ -28,5 +28,14 @@ act_payload_sync() {
     ensure_license && key="$(stored_license)"
   fi
   [ -n "$key" ] || { warn "Cần license để tải payload."; return 1; }
-  fetch_payload "$key"
+  local rc=0
+  fetch_payload "$key" || rc=1
+
+  # Máy đã từng cài site LAT Review thì làm mới luôn payload của bản đó. Máy chưa có thì
+  # bỏ qua, để máy học viên bản cũ không tự dưng tải thêm bộ plugin mới.
+  if [ -d "${WPF_ROOT}/payload/lat-review" ]; then
+    info "Làm mới payload LAT Review..."
+    fetch_payload "$key" latreview || rc=1
+  fi
+  return $rc
 }
