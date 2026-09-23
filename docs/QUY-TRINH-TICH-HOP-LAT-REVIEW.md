@@ -830,3 +830,32 @@ Cộng thêm: 25 trên 25 module nạp đủ, 164 bài, nhãn điểm `LAT Score
 
 Lần kiểm đầu ngay sau khi cài, vài trang của thu1 trả 503. Đó là nhiễu lúc container vừa khởi
 động, gọi lại thì 200. Đừng vội kết luận hỏng khi site vừa lên chưa tới một phút.
+
+---
+
+## 19. PHÁT HÀNH NHÁNH TEST VÀ SỬA DEMO (2026-09-24)
+
+### Phát hành chỉ trên nhánh `feat/lat-review`, `main` giữ nguyên 3.19.0
+
+Cài để test: `LATVPS_REF=feat/lat-review curl -fsSL https://raw.githubusercontent.com/affiliatecmscom/latvps/main/latvps.sh | sudo bash`.
+
+- **3.20.0-beta.1**: loại site `latreview`, `payload-sync` làm mới cả payload LAT Review khi máy đã có, `payload/lat-review/` vào `.gitignore`.
+- **3.20.0-beta.2**: vá 2 lỗi bắt được khi cài trên VPS trắng.
+  1. `cron.sh` dò nhầm `affiliatecms-ai` nên khoá cron AI rơi về query string, nằm trong access log. Chỉ sửa tên cũng không đủ, vì `lat-review-ai` 1.0.0 nhỏ hơn mốc 1.3.23. Site `latreview` giờ luôn gửi khoá qua header.
+  2. Tệp nạp module chép trước `wp core install` nên in ra 10 dòng "WordPress database error". Giờ chép sau bước nạp đè CSDL demo.
+
+### Hai lỗi trên demo, user báo, đã sửa
+
+| Lỗi | Gốc | Sửa |
+|---|---|---|
+| Danh mục 404, danh mục con 301 về trang chủ | Luật rewrite trong CSDL demo cũ. Bản vá ở `lat add` không chạy trên chính demo | `wp rewrite flush --hard` và **xoá FastCGI cache**, vì nginx cache cả 301 trong 60 phút |
+| Show Coupon không mở tab store | Demo thiếu 27 bài store nên thiếu `data-acms-store` | Nhập 27 bài giữ nguyên ID, dựng lại 27 ảnh store-og với tên site mới |
+
+Dựng lại gói nội dung: 9,8 MB lên 11 MB.
+
+### Nghiệm thu trên VPS trắng: ĐẠT
+
+Cài bằng đúng lệnh người test, rồi `lat update`, `lat payload-sync`, xoá và cài lại: 0 dòng lỗi CSDL, cron AI qua header, 27 trang store, 270 link 0 hỏng. Bấm thật trên trình duyệt: tab mới mở trang store kèm popup mã, tab gốc sang cửa hàng.
+
+> **Bài học:** bản vá đặt trong luồng cài chỉ cứu site cài MỚI. Nguồn gốc là demo thì phải vá trên
+> chính demo rồi dựng lại gói, không thì lỗi vẫn nằm đó để người dùng thấy trước tiên.
