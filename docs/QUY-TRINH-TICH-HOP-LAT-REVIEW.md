@@ -895,3 +895,25 @@ Rà bảo mật cả LATVPS lẫn 4 plugin. Đã vá và phát hành:
 Kiểm bằng hành vi thật: cài token `$(touch /tmp/PWNED_TOKEN)` vào option rồi cài cron: token bị thay, crontab sạch, không có tệp PWNED. Plugin: kiểm cập nhật với TLS bắt buộc vẫn thành công.
 
 Để sau (cần sửa phía `app.lat.vn`): ký số gói, gửi license qua POST thay query string.
+
+---
+
+## 22. BÀN GIAO CUỐI NGÀY 2026-09-24
+
+Đang chạy: LATVPS 3.20.1, `lat-review` 1.0.3, `lat-review-ai` 1.0.1, `affiliatecms-pro` 1.7.35, `affiliatecms-ai` 1.3.40.
+
+### Việc phiên sau
+
+1. Thông báo học viên cập nhật: `lat update`, `lat payload-sync`, cập nhật plugin trong wp-admin, và **`lat cron`
+   cài lại cron cho từng site** (bản vá crontab chỉ áp khi cron được cài lại, `lat update` không tự làm).
+2. Theo dõi phản hồi. Đường lùi: plugin hạ bản trong wp-admin; LATVPS `LATVPS_REF=v3.19.0`.
+3. Ký số gói cài đặt, gửi license qua POST thay query string (cần sửa phía `app.lat.vn`).
+4. Điểm thấp chưa làm: giới hạn worker AI khi gọi thẳng `cron/work`; khoá Gemini trên URL (chỉ admin);
+   nghi ngờ thuộc tính block trong output AI chưa lọc (chưa xác minh); thử tay crop ảnh với ảnh ảo.
+5. Cân nhắc để `lat update` tự cài lại cron cho mọi site sau khi cập nhật, để bản vá kiểu này không phụ thuộc học viên.
+
+### Quyết định đã chốt
+
+- Site học viên chỉ có tài khoản admin (như bản cũ), không mang tác giả demo.
+- Không lưu ảnh Amazon trên host: featured và og:image dùng link Amazon.
+- Plugin cập nhật bắt buộc kiểm TLS, chấp nhận site hỏng bộ chứng chỉ gốc sẽ không cập nhật được.
