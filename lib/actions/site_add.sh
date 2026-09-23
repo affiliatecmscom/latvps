@@ -21,6 +21,17 @@ act_site_add() {
     esac
   done
 
+  # --type và --email đi vào .env, site.conf, sed: xuống dòng hay ký tự lạ là chèn thêm dòng cấu hình.
+  case "$type" in
+    ""|latreview|affiliatecms|vanilla) ;;
+    *) warn "--type không hợp lệ: ${type} (chỉ nhận latreview|affiliatecms|vanilla)."; return 1;;
+  esac
+  # grep so TỪNG DÒNG: email có xuống dòng thì dòng đầu hợp lệ vẫn lọt, nên chặn khoảng trắng trước.
+  case "$email" in *[[:space:]]*) warn "--email không hợp lệ (có khoảng trắng hoặc xuống dòng)."; return 1;; esac
+  if [ -n "$email" ] && ! printf '%s' "$email" | grep -qE '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$'; then
+    warn "--email không hợp lệ: ${email}"; return 1
+  fi
+
   # --- Bước 1: domain ---
   while true; do
     [ -n "$domain" ] || domain="$(ui_input "Nhập domain (vd: my-deals.com):" "")" || return 1
@@ -108,13 +119,18 @@ act_site_add() {
   local db_password redis_password le_host="" le_email=""
   db_password="$(rand_pass 24)"; redis_password="$(rand_pass 20)"
   if [ "$ssl" = "auto" ]; then le_host="${domain},www.${domain}"; le_email="$email"; fi
-  {
-    printf 'DB_PASSWORD=%s\n' "$db_password"
-    printf 'REDIS_PASSWORD=%s\n' "$redis_password"
-    printf 'VIRTUAL_HOST=%s\n' "${domain},www.${domain}"
-    printf 'LE_HOST=%s\n' "$le_host"
-    printf 'LE_EMAIL=%s\n' "$le_email"
-  } > "$dir/.env"
+  # umask trong subshell: tệp sinh ra đã là 600, không có khoảnh khắc nào người khác đọc được
+  # mật khẩu DB. Đặt umask ngay trong process lat là rò sang các bước sau (xem memory umask).
+  (
+    umask 077
+    {
+      printf 'DB_PASSWORD=%s\n' "$db_password"
+      printf 'REDIS_PASSWORD=%s\n' "$redis_password"
+      printf 'VIRTUAL_HOST=%s\n' "${domain},www.${domain}"
+      printf 'LE_HOST=%s\n' "$le_host"
+      printf 'LE_EMAIL=%s\n' "$le_email"
+    } > "$dir/.env"
+  )
   chmod 600 "$dir/.env"
 
   # cert -> /opt/proxy/certs (cho cả apex + www)

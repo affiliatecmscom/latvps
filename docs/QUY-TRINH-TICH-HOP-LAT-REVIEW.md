@@ -878,3 +878,20 @@ git -C /opt/latvps checkout main && lat update
 
 `main` ngay trước khi gộp được giữ ở nhánh `backup/main-3.19.0`. Plugin thì học viên tự hạ về bản cũ
 ngay trong wp-admin, vì trang tải về giữ đủ các bản đã phát hành.
+
+---
+
+## 21. BẢN VÁ BẢO MẬT 3.20.1 VÀ PLUGIN (2026-09-24)
+
+Rà bảo mật cả LATVPS lẫn 4 plugin. Đã vá và phát hành:
+
+| Thành phần | Bản | Vá |
+|---|---|---|
+| LATVPS | 3.20.1 | **Tiêm lệnh vào crontab root** qua option `acms_api_token` / `acms_ai_cron_key` (ai sửa được option WordPress là chạy lệnh root): chỉ nhận `[A-Za-z0-9]{16,64}`, lạ thì sinh lại trên host. `lat domain` nhận site `latreview`. Sau khi nạp CSDL demo: xoá usermeta mồ côi, tắt tự đăng ký, vai mặc định subscriber. `.env` ghi dưới umask 077. Kiểm `--type`, `--email` |
+| `lat-review` / `affiliatecms-pro` | 1.0.3 / 1.7.35 | Cập nhật, license, telemetry luôn kiểm chứng chỉ; link gói chỉ nhận https đúng máy chủ license. Endpoint `/pkg/v1/verify` bỏ email, IP, phiên bản. Prompt tự do card title chỉ cho biên tập viên trở lên |
+| `lat-review-ai` / `affiliatecms-ai` | 1.0.1 / 1.3.40 | Nút "Run now" gửi khoá cron qua header. TLS và endpoint như trên, bỏ thêm chi phí AI |
+| Bản cũ riêng | 1.7.35 / 1.3.40 | Kèm 1.7.34 (nofollow), quét giá theo lô, band giá Creators, lùi nhịp 429, admin.css, Scanner không xếp việc AI trả phí trùng |
+
+Kiểm bằng hành vi thật: cài token `$(touch /tmp/PWNED_TOKEN)` vào option rồi cài cron: token bị thay, crontab sạch, không có tệp PWNED. Plugin: kiểm cập nhật với TLS bắt buộc vẫn thành công.
+
+Để sau (cần sửa phía `app.lat.vn`): ký số gói, gửi license qua POST thay query string.

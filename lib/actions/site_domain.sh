@@ -34,7 +34,7 @@ act_site_domain() {
   wp_run "$id" option update siteurl "https://${new_canon}" >/dev/null 2>&1 || true
 
   # 2. License: chuyển domain
-  if [ "$type" = "affiliatecms" ]; then
+  if [ "$type" = "affiliatecms" ] || [ "$type" = "latreview" ]; then
     local key; key="$(site_get "$id" LICENSE_KEY 2>/dev/null || stored_license)"
     if [ -n "$key" ]; then
       info "Chuyển license sang domain mới..."
@@ -79,7 +79,7 @@ act_site_domain() {
   # 5. Cài lại cron theo domain MỚI. Dòng cron gắn cứng domain cũ (--resolve + URL), không cập nhật
   # thì toàn bộ automation AffiliateCMS chết IM LẶNG: site vẫn chạy, chỉ tự động hoá ngừng.
   # site.conf phải được cập nhật TRƯỚC (cron_install_for_site đọc DOMAIN từ đó).
-  if [ "$type" = "affiliatecms" ] && need_cmd crontab; then
+  if { [ "$type" = "affiliatecms" ] || [ "$type" = "latreview" ]; } && need_cmd crontab; then
     if crontab -l 2>/dev/null | grep -q "# >>> latvps ${id} >>>"; then
       info "Cập nhật cron theo domain mới..."
       cron_install_for_site "$id" && ok "Đã trỏ cron sang ${new}." \

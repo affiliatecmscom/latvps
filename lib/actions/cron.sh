@@ -46,14 +46,20 @@ cron_install_for_site() {
   local token key
   # PRO: X-ACMS-Token = option acms_api_token. AI: cron_key = option acms_ai_cron_key.
   # Đọc trước (nếu plugin tự sinh lúc kích hoạt thì dùng của plugin); rỗng thì tự sinh + lưu.
+  # BẢO MẬT: hai giá trị này đọc từ CSDL WordPress rồi ghi vào crontab của ROOT. Ai sửa được
+  # option WordPress (admin site, plugin có lỗ hổng, SQL injection) mà cài được `$(...)` vào đây
+  # là chạy lệnh bằng quyền root trên cả VPS. Nên CHỈ nhận chữ và số; giá trị rỗng hoặc lạ thì
+  # sinh mới NGAY TRÊN HOST (không tin giá trị PHP trả về) rồi ghi đè vào WordPress.
   token="$(wp_run "$id" option get acms_api_token 2>/dev/null | tr -d '[:space:]')"
-  if [ -z "$token" ]; then
-    token="$(wp_run "$id" eval 'echo wp_generate_password(32,false);' 2>/dev/null | tr -d '[:space:]')"
+  if ! printf '%s' "$token" | grep -qE '^[A-Za-z0-9]{16,64}$'; then
+    [ -n "$token" ] && warn "Token automation của site có ký tự lạ, đã thay bằng token mới."
+    token="$(rand_pass 16)"
     wp_run "$id" option update acms_api_token "$token" >/dev/null 2>&1 || true
   fi
   key="$(wp_run "$id" option get acms_ai_cron_key 2>/dev/null | tr -d '[:space:]')"
-  if [ -z "$key" ]; then
-    key="$(wp_run "$id" eval 'echo wp_generate_password(32,false);' 2>/dev/null | tr -d '[:space:]')"
+  if ! printf '%s' "$key" | grep -qE '^[A-Za-z0-9]{16,64}$'; then
+    [ -n "$key" ] && warn "Khoá cron AI của site có ký tự lạ, đã thay bằng khoá mới."
+    key="$(rand_pass 16)"
     wp_run "$id" option update acms_ai_cron_key "$key" >/dev/null 2>&1 || true
   fi
 

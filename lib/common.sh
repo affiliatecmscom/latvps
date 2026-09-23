@@ -392,6 +392,13 @@ acms_import_demo_content() {
     warn "Không tạo được admin sau clone - kiểm tra wp-admin."
   fi
 
+  # BẢO MẬT: bản dump demo chỉ bỏ DỮ LIỆU wp_users/wp_usermeta ở phía máy chủ, máy học viên không
+  # kiểm lại. Khoá chặt ở đây: xoá usermeta mồ côi (vd wp_capabilities của user ID 2+ còn sót, người
+  # đăng ký kế tiếp nhận ID đó là thừa hưởng quyền), tắt tự đăng ký, vai mặc định là subscriber.
+  docker exec "${id}_db" sh -c 'mariadb -uwordpress -p"$MARIADB_PASSWORD" wordpress -e "DELETE FROM wp_usermeta WHERE user_id NOT IN (SELECT ID FROM wp_users);"' >/dev/null 2>&1 || true
+  wp_run "$id" option update users_can_register 0 >/dev/null 2>&1 || true
+  wp_run "$id" option update default_role subscriber >/dev/null 2>&1 || true
+
   info "Đổi URL demo -> ${canon_host} ..."
   wp_run "$id" search-replace "$demo_host" "$canon_host" --all-tables --skip-columns=guid >/dev/null 2>&1 || true
   wp_run "$id" option update home "https://${canon_host}" >/dev/null 2>&1 || true
