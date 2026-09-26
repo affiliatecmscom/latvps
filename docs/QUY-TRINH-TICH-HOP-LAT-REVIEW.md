@@ -942,3 +942,18 @@ nhật: `lat-review` 1.0.3 thấy 1.0.4, `affiliatecms-pro` 1.7.35 không thấy
 
 **Học viên:** chỉ cần cập nhật plugin `lat-review` trong wp-admin. `lat update` là không bắt buộc,
 chỉ ảnh hưởng site cài mới.
+
+### 23.1 `lat-review` 1.0.5 và `lat-review-child` 1.0.1 trên kênh theme (cùng ngày)
+
+Gỡ luôn gốc của cạm bẫy trên: updater trong plugin canh nhầm `affiliateCMS-theme` (theme cha bản cũ).
+Giờ canh mọi theme con của `lat-theme` (bản thân `lat-theme` vẫn tự canh bằng updater riêng của nó).
+Trang **Updates** của plugin liệt kê `LAT Theme` và `LAT Review Child` thay cho `AffiliateCMS Theme`.
+`lat-review-child` 1.0.1 đã phát hành trên kênh theme.
+
+Kiểm bằng hành vi thật: hạ child theme trên demo về 1.0.0, WordPress tự thấy 1.0.1, `wp theme update` cập
+nhật xong, tệp khớp đúng `assets/themes/lat-review-child`. Kênh: `lat-review` 1.0.3 và 1.0.4 thấy 1.0.5;
+`lat-review-ai`, `affiliatecms-pro`, `affiliatecms-ai`, `affiliateCMS-theme`, `lat-theme` không đổi.
+Bản vá md5 ở 1.0.4 vẫn giữ, cho site chưa bấm cập nhật theme.
+
+**Học viên LAT Review:** cập nhật plugin `lat-review` lên 1.0.5, sau đó cập nhật theme `LAT Review Child`
+lên 1.0.1 (hiện trong Dashboard > Updates).
