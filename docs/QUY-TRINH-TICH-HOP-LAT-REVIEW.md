@@ -917,3 +917,28 @@ Kiểm bằng hành vi thật: cài token `$(touch /tmp/PWNED_TOKEN)` vào optio
 - Site học viên chỉ có tài khoản admin (như bản cũ), không mang tác giả demo.
 - Không lưu ảnh Amazon trên host: featured và og:image dùng link Amazon.
 - Plugin cập nhật bắt buộc kiểm TLS, chấp nhận site hỏng bộ chứng chỉ gốc sẽ không cập nhật được.
+
+---
+
+## 23. SHOW PRICE ẨN CẢ TRANG COMPARE: `lat-review` 1.0.4, LATVPS 3.20.2 (2026-09-26)
+
+**Lỗi:** tắt "Show price" trong Visible Elements thì bảng roundup chỉ để trống ô giá (vẫn còn cột
+Price), còn trang `/compare/` vẫn in giá đầy đủ, kèm nhãn "Lowest price" và giá gốc gạch ngang.
+`compare.php` của `lat-review-child` 1.0.0 in giá cứng, không đọc công tắc.
+
+**Cạm bẫy:** child theme **không có kênh tự cập nhật** (updater của `lat-theme` chỉ canh chính nó,
+updater của plugin chỉ canh `affiliateCMS-theme` và con của nó). Chỉ vá child theme thì mọi site
+học viên đã cài giữ mãi bản lỗi.
+
+| Thành phần | Sửa |
+|---|---|
+| `lat-review` 1.0.4 | `list.php` bỏ hẳn cột Price khi tắt. Plugin kèm bản vá `templates/frontend/compare-page.php`; `mu/pf-compare.php` dùng bản này **chỉ khi** `compare.php` của theme trùng md5 bản 1.0.0 gốc, site đã tự sửa thì giữ bản của họ |
+| `lat-review-child` 1.0.1 (`assets/themes/`) | `compare.php` theo công tắc `show_price`, tắt là ẩn cả hàng Price. Cho site cài mới |
+| LATVPS 3.20.2 | Mang child theme 1.0.1 |
+
+Kiểm trên demo, cả khi child theme còn bản 1.0.0 lẫn sau khi lên 1.0.1: tắt thì compare mất hàng
+Price (8 còn 7 hàng, 0 giá, 0 "Lowest price"), roundup mất cả cột; bật lại hiện đủ. Máy chủ cập
+nhật: `lat-review` 1.0.3 thấy 1.0.4, `affiliatecms-pro` 1.7.35 không thấy gì.
+
+**Học viên:** chỉ cần cập nhật plugin `lat-review` trong wp-admin. `lat update` là không bắt buộc,
+chỉ ảnh hưởng site cài mới.

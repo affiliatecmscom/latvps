@@ -41,6 +41,8 @@ get_header();
         $cols     = count($products);
         $score_label = function_exists('pf_score_label') ? pf_score_label() : 'LAT Score';
         $showUpdate  = (bool) ((get_option('acms_general_settings', [])['show_update']) ?? true);
+        // Cùng công tắc "Show price" (Visible Elements) với bảng trong bài roundup: tắt là ẩn cả hàng Price.
+        $showPrice   = (bool) ((get_option('acms_general_settings', [])['show_price']) ?? true);
         ?>
 
         <header class="acms-cmp__header">
@@ -71,6 +73,7 @@ get_header();
               <?php endforeach; ?>
             </tr>
 
+            <?php if ($showPrice) : ?>
             <tr class="acms-cmp__row">
               <th class="acms-cmp__label" scope="row">Price</th>
               <?php foreach ($products as $p) :
@@ -97,6 +100,7 @@ get_header();
                 </td>
               <?php endforeach; ?>
             </tr>
+            <?php endif; ?>
 
             <tr class="acms-cmp__row">
               <th class="acms-cmp__label" scope="row"><?php echo esc_html($score_label); if (function_exists('pf_score_tooltip')) { echo ' ' . pf_score_tooltip(); } ?></th>
