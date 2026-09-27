@@ -71,6 +71,8 @@ services:
         define('WP_REDIS_PORT',6379);
         define('WP_REDIS_PASSWORD','${REDIS_PASSWORD}');
         define('FS_METHOD','direct');
+        // Tắt Theme/Plugin File Editor trong wp-admin (admin bị lộ mật khẩu cũng không sửa được PHP). Vẫn update/cài plugin bình thường.
+        define('DISALLOW_FILE_EDIT',true);
     volumes:
       - wphtml:/var/www/html
       - ./wp-content:/var/www/html/wp-content

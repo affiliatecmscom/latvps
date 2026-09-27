@@ -13,6 +13,13 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
+/* Tắt Theme File Editor và Plugin File Editor trong wp-admin: tài khoản admin bị lộ mật khẩu cũng
+ * không sửa được mã PHP ngay trên site. Site cài mới đã có hằng này trong docker-compose (LATVPS
+ * 3.20.3), dòng dưới phủ cho site cài trước đó. Không chặn cập nhật hay cài plugin. */
+if (!defined('DISALLOW_FILE_EDIT')) {
+    define('DISALLOW_FILE_EDIT', true);
+}
+
 /* ============================================================
  * ENQUEUE: Montserrat + child style (dep acms-main để nạp SAU cha)
  * ============================================================ */
@@ -1341,3 +1348,6 @@ add_filter('rank_math/opengraph/twitter/twitter_title', static function ($t) {
 
     return $seo ? $seo['title'] : $t;
 }, 20);
+
+/* Trang Appearance > Theme Settings: chèn code Head / Body open / Footer (Google Tag Manager). */
+require_once get_stylesheet_directory() . '/inc/theme-settings.php';

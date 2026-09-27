@@ -957,3 +957,27 @@ Bản vá md5 ở 1.0.4 vẫn giữ, cho site chưa bấm cập nhật theme.
 
 **Học viên LAT Review:** cập nhật plugin `lat-review` lên 1.0.5, sau đó cập nhật theme `LAT Review Child`
 lên 1.0.1 (hiện trong Dashboard > Updates).
+
+## 24. CHÈN CODE GOOGLE TAG MANAGER, TẮT FILE EDITOR: `lat-review-child` 1.0.2, LATVPS 3.20.3 (2026-09-27)
+
+**Vấn đề:** child theme cũ `affiliateCMS-Child` có trang Appearance > Theme Settings để dán mã theo dõi
+(Google Tag Manager, Analytics, pixel), còn `lat-review-child` thì không, nên học viên LAT Review không có
+chỗ dán GTM. Cả hai loại site còn để mở Theme File Editor và Plugin File Editor: lộ mật khẩu admin là kẻ
+xâm nhập sửa được PHP ngay trong wp-admin.
+
+| Thành phần | Sửa |
+|---|---|
+| `lat-review-child` 1.0.2 | Tệp mới `inc/theme-settings.php`: Appearance > Theme Settings, 3 ô Head Code (in sát đầu `<head>`, chỗ dán đoạn script chính của GTM), Body Open Code (ngay sau `<body>`, chỗ dán đoạn `<noscript>`), Footer Code. Giữ tên option `acmsc_code_*` của bản cũ. Lưu đòi cả `edit_theme_options` lẫn `unfiltered_html` (bản cũ chỉ kiểm quyền đầu). `functions.php` định nghĩa `DISALLOW_FILE_EDIT` nếu chưa có, để phủ site đã cài |
+| `templates/wordpress/compose.yml.tmpl` | Thêm `DISALLOW_FILE_EDIT` vào `WORDPRESS_CONFIG_EXTRA`. Chỉ tác dụng cho site cài mới, áp cho cả hai loại site |
+| LATVPS 3.20.3 | Mang child theme 1.0.2 và khuôn compose trên |
+
+**Không dùng `DISALLOW_FILE_MODS`**, vì hằng đó chặn luôn cập nhật và cài plugin, theme trong wp-admin.
+
+Kiểm trên demo `iflmmo.lat.vn`:
+- Admin mất `edit_themes`, `edit_plugins`, nhưng vẫn có `update_plugins`, `install_plugins`.
+- Giả lập site cũ (bỏ hằng trong cấu hình): riêng child theme vẫn tắt được editor; bỏ qua theme thì `edit_plugins` trở lại `true`.
+- Mã GTM thật dán qua trang mới: đoạn script ở đầu `<head>`, đoạn `noscript` ngay sau `<body>` trên trang chủ, bài và `/coupons/`. User đã tự xoá mã sau khi kiểm.
+- Kênh cập nhật: đổi nhãn theme demo về 1.0.1, WordPress tự thấy 1.0.2, `wp theme update` xong thì tệp khớp đúng nguồn.
+
+**Học viên LAT Review:** vào Dashboard > Updates, cập nhật theme `LAT Review Child` lên 1.0.2. Site cài mới
+sau `lat update` có sẵn cả hai lớp. Sau khi dán mã GTM, trang có thể chưa hiện mã ngay vì nginx cache giữ trang tối đa 60 phút.
