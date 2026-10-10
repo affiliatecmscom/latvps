@@ -32,6 +32,7 @@ lat - quản lý LATVPS (nhiều WordPress site cô lập trên 1 VPS)
   lat update-check             kiểm tra xem có bản lat mới không (không tự cập nhật)
   lat upgrade                  cập nhật hệ thống (image WP/MariaDB/nginx + OS)
   lat install-claude           cài Claude Code (CLI Anthropic) + auth
+  lat claude-md [id|domain]    tạo CLAUDE.md (luật dự án cho Claude Code) ở thư mục site
   lat cron                     cài cron AffiliateCMS cho site / thêm cron tuỳ chọn
   lat payload-sync [src]       cập nhật plugin bundle
   lat setup                    (lại) bootstrap host
@@ -62,6 +63,7 @@ case "$cmd" in
   update-check) act_update_check "$@" ;;
   upgrade)      require_root; act_update ;;
   install-claude|claude) require_root; act_install_claude ;;
+  claude-md)    require_root; act_claude_md "$@" ;;
   cron)         require_root; act_cron ;;
   payload-sync) require_root; act_payload_sync "$@" ;;
   setup)        act_setup ;;

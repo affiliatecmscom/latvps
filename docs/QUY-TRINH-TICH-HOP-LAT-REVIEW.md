@@ -1005,3 +1005,21 @@ không hiển thị ở đâu, đồng bộ lần sau API ghi lại y nguyên. B
 
 Kiểm: site tạm nạp từng dump thật, sau bước làm sạch không còn email chủ demo, `get_theme_mod` đọc đúng;
 migration chạy lần 1 đổi đúng, lần 2 bỏ qua; md5 tải qua `app.lat.vn` khớp tệp đã vá, license giả trả 403.
+
+## 26. CLAUDE.md CHO TỪNG SITE: LATVPS 3.21.0 (2026-10-10)
+
+**Mục đích:** học viên mở Claude Code trong thư mục site là Claude tự đọc luật dự án (cách viết, chuẩn
+nội dung affiliate thị trường Mỹ, bảo mật, vận hành WordPress), không phải dặn lại mỗi phiên.
+
+| Thành phần | Nội dung |
+|---|---|
+| `templates/claude/CLAUDE.md.tmpl` | Khuôn lấy từ `affiliatecms.com/wp-content/uploads/CLAUDE-template.md`, phần từ dòng `=== COPY TỪ ĐÂY XUỐNG ===`. Thêm mục 0 "Môi trường VPS": thư mục, theme, tên container, lệnh WP-CLI, 3 lệnh purge cache, `lat backup`, cấm đọc `.env`/`site.conf` |
+| `lib/actions/claude_md.sh` | `claude_md_write` điền brand, domain, ngày, ngách (nếu có), mã site, thư mục, theme đang dùng; giữ nguyên mục 7 (danh sách placeholder). File cũ đổi tên `.bak`. `act_claude_md` cho site đã cài |
+| `lib/actions/site_add.sh` | Cuối `lat add` hỏi có tạo CLAUDE.md không (mặc định Có, site vanilla mặc định Không), hỏi brand (gợi ý từ domain) và ngách. Màn hình kết thúc in `cd <thư mục> && claude` |
+| `bin/lat`, `lib/menu.sh` | Lệnh `lat claude-md [id\|domain]`, menu quản lý site mục 7 |
+
+File nằm ở `/opt/sites/<id>/CLAUDE.md`, không nằm trong `wp-content/`, vì nginx chỉ phục vụ `wp-content` và
+core nên thư mục gốc site không lộ ra web.
+
+**Sửa khuôn:** bản trên affiliatecms.com đổi thì phải chép lại vào `templates/claude/CLAUDE.md.tmpl` và phát
+hành `lat`, học viên không tự nhận bản trên web.

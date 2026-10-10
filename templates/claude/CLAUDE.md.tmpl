@@ -1,0 +1,155 @@
+# CLAUDE.md, {{BRAND}}
+
+Hướng dẫn cho Claude khi làm việc trong repo này. Đọc trước mỗi phiên.
+
+> **Brand**: {{BRAND}}, domain {{DOMAIN}}. Ngách: {{NICHE}}. Thị trường: **Hoa Kỳ**, tiếng Anh Mỹ.
+
+## 0. Môi trường VPS (lat tự sinh khi cài site)
+
+- Thư mục dự án: `{{SITE_DIR}}`. Code tuỳ biến nằm ở `wp-content/` (theme đang dùng: `{{THEME}}`). Core WordPress nằm trong container, không sửa.
+- Site chạy bằng Docker, 4 container: `{{SITE_ID}}_web` (nginx), `{{SITE_ID}}_php`, `{{SITE_ID}}_db`, `{{SITE_ID}}_redis`.
+- WP-CLI: `docker exec {{SITE_ID}}_php php /usr/local/bin/wp-cli.phar --allow-root --path=/var/www/html <lệnh>`.
+- Purge cache sau khi sửa PHP (rule I2): `wp cache flush` qua WP-CLI ở trên, `docker restart {{SITE_ID}}_php` (OPcache), `docker exec {{SITE_ID}}_web sh -c 'rm -rf /var/cache/nginx/wp/*'` (page cache).
+- Backup cả site: `lat backup {{SITE_ID}}` (lưu ở `/opt/backups/{{SITE_ID}}/`).
+- `.env` và `site.conf` trong thư mục này chứa mật khẩu DB, Redis: KHÔNG đọc ra màn hình, KHÔNG chép đi đâu (rule J).
+
+## 1. Dự án là gì
+
+Website review sản phẩm và roundup "best X" theo chuẩn biên tập độc lập, kiếm tiền bằng affiliate (Amazon Associates + {{NETWORK}}). Stack: WordPress + child theme + plugin affiliate + plugin SEO. Nội dung phải đạt chuẩn E-E-A-T: có phương pháp đánh giá, tiêu chí chọn rõ ràng, tác giả thật, minh bạch affiliate.
+
+## 2. Trạng thái hiện tại (CẬP NHẬT KHI CÓ THAY ĐỔI LỚN)
+
+**Cập nhật: {{YYYY-MM-DD}}. Giai đoạn: scaffold.**
+
+| | |
+|---|---|
+| Môi trường | production (VPS, cài bằng LATVPS) |
+| Bài publish | {{số}} |
+| Category | {{N_PARENT}} cha + {{N_CHILD}} con |
+| Đang làm dở | {{mô tả 1 dòng}} |
+| Blocker | {{mô tả hoặc "không"}} |
+
+Quyết định ĐÃ CHỐT ghi ở `docs/PRD.md`. Việc còn lại ghi ở `docs/PROJECT-STATUS.md`.
+
+## 3. Cấu trúc site (chốt sớm, đổi sau rất tốn)
+
+- **Roundup "Best X"**: bài chính, so sánh nhiều sản phẩm, có bảng và khối "how we picked". Keyword dạng "Best" + danh từ số nhiều, **không nhét năm vào slug** (gắn năm động vào title qua plugin SEO).
+- **Buying guide / how-to**: bài hỗ trợ, internal link về roundup.
+- **Category page**: cây danh mục ở `docs/category-taxonomy.md`.
+- **URL**: roundup flat `/{{slug-bai}}/`, category lồng `/category/cha/con/`. Chốt một lần, không đổi.
+- **Index**: Home, Post, Category, Page. **Noindex**: Tag, Author, Search, URL redirect affiliate.
+- **Trang bắt buộc phải có TRƯỚC khi apply affiliate** (thiếu là lý do bị từ chối phổ biến nhất): About, Contact, Privacy Policy, Affiliate Disclosure, Editorial Policy, How We Review, Terms of Service. Để index, link ở footer mọi trang.
+
+## 4. Quy tắc bắt buộc
+
+### A. Workflow
+
+1. **Backup trước khi sửa bất kỳ file nào** vào `backups/<tên-file>.<timestamp>.bak`.
+2. **Lên plan và hỏi trước, được duyệt mới code.** Không tự ý sửa.
+3. **Không tự mở rộng phạm vi.** Nhờ sửa A thì sửa A, thấy B có vấn đề thì báo.
+4. Báo cáo trung thực: fail thì nói fail kèm output, bỏ bước nào thì nói rõ.
+
+### B. Cách viết
+
+1. **TUYỆT ĐỐI KHÔNG dùng em dash (—)** ở bất kỳ đâu, kể cả comment code. Thay bằng phẩy, hai chấm, chấm, ngoặc đơn. Đây là dấu vết văn AI dễ nhận nhất.
+2. **Không dùng `-` làm dấu phân tách** trong title (không viết `Best Blenders - 2026`). Dùng `|`, `:` hoặc ngoặc đơn. Hyphen chỉ nằm trong từ ghép (`budget-friendly`) và slug.
+3. Trả lời user bằng tiếng Việt, giữ thuật ngữ kỹ thuật tiếng Anh.
+
+### C. Nội dung website (quan trọng nhất)
+
+1. Copy hiển thị viết bằng **tiếng Anh Mỹ chuyên nghiệp, giọng báo chí biên tập độc lập**. Chính tả Mỹ, đơn vị Mỹ (inch, lb, °F, USD).
+2. **Không chém gió, không clickbait**, không superlative rỗng ("the ultimate", "game-changing"), không hứa kết quả.
+3. **KHÔNG BỊA SỐ LIỆU**: specs, giá, kết quả đo, số lượng review, giải thưởng, trích dẫn chuyên gia. Thiếu dữ liệu thì viết định tính hoặc bỏ. Mọi con số phải truy được về nguồn.
+4. **KHÔNG claim tự test**: cấm `test / testing / tested / lab-tested / hands-on` trong copy hiển thị, trừ khi thật sự có bằng chứng. Claim sai hại E-E-A-T và có rủi ro FTC. Dùng: review, evaluate, assess, analyze, research, compare, rate, score, recommend. Trang trust đặt tên **"How We Review"**.
+5. **Chuẩn editorial**: nêu tiêu chí trước, pros và cons cân bằng, nói rõ **ai không nên mua**. Bài toàn ưu điểm là quảng cáo trá hình.
+6. **Điểm số minh bạch**: đặt tên riêng ({{SCORE_NAME}}), công bố công thức và trọng số, chấm cùng bộ tiêu chí. Không để plugin random rating.
+7. **E-E-A-T**: tác giả thật có bio nêu chuyên môn, ngày publish và cập nhật, trích nguồn. **Không bịa bằng cấp, giải thưởng, hay người không có thật.**
+8. **Disclosure (FTC)**: đặt **phía trên link affiliate đầu tiên** trong bài, không giấu ở footer. Ghi rõ hoa hồng không ảnh hưởng thứ hạng.
+9. Không hardcode giá vào body text, giá đổi liên tục. Ghi ngày review, cập nhật khi sản phẩm đổi đời.
+
+### D. Nội dung do AI viết
+
+Google không cấm nội dung AI. Google phạt **nội dung không có giá trị thêm, sản xuất hàng loạt** (chính sách *scaled content abuse*). Ranh giới ở quy trình, không ở công cụ.
+
+1. **AI viết nháp, người biên tập và chịu trách nhiệm.** Không publish bản chưa ai đọc lại.
+2. **Mỗi bài phải có giá trị thêm** so với bài đang top: góc nhìn riêng, tiêu chí rõ, dữ liệu nơi khác chưa gom. Xào lại mô tả sản phẩm là bài rác.
+3. **Kiểm sự thật trước khi publish.** AI bịa spec và model number rất tự nhiên.
+4. **Không spin, không sinh hàng trăm bài chỉ khác tên sản phẩm. Đăng có nhịp độ**, site mới bật 500 bài một tuần là tín hiệu bất thường.
+
+### E. Ngách YMYL (nếu {{NICHE}} chạm sức khoẻ, tài chính, an toàn, trẻ em)
+
+1. **Không đưa lời khuyên y tế, liều lượng, chẩn đoán**, không claim chữa bệnh hay giảm cân. Đây là vùng FTC và FDA xử nặng.
+2. Không đưa lời khuyên đầu tư, thuế, pháp lý nếu không có chứng chỉ thật.
+3. Sản phẩm cho trẻ em, xe hơi, điện, gas: nêu cảnh báo an toàn và tiêu chuẩn liên quan (CPSC, UL, ASTM).
+4. Có **disclaimer** đặt gần đầu bài, không giấu ở footer.
+
+### F. Affiliate compliance
+
+1. Mọi link affiliate gắn `rel="sponsored nofollow"`.
+2. **Amazon**: tuân thủ Associates Operating Agreement. Không hiển thị giá hay ảnh sản phẩm lấy ngoài API chính thức, không đặt link affiliate trong email hoặc PDF. Câu bắt buộc ở footer: *As an Amazon Associate I earn from qualifying purchases.*
+3. **Kiểm tra tracking ID thật trước khi bật kiếm tiền.** Đừng để tag demo chạy trên site của bạn.
+4. Redirect affiliate tự viết: chặn bot, rate limit, noindex, chặn trong `robots.txt`.
+
+### G. Ảnh và bản quyền
+
+1. **Không scrape ảnh sản phẩm từ Google Images, site đối thủ, hay trang bán hàng.** Đây là rủi ro bị đòi tiền bản quyền cao nhất với site mới.
+2. Ảnh Amazon chỉ lấy qua API chính thức. Ảnh minh hoạ dùng nguồn có license rõ ràng (Unsplash, Pexels, Pixabay) hoặc tự tạo.
+3. Alt mô tả thật nội dung ảnh, không nhồi keyword. Nén ảnh, dùng WebP, đặt `width`/`height` để tránh layout shift.
+
+### H. Code và CSS
+
+1. **KHÔNG inline CSS**: không `style="..."` trên thẻ, không `<style>` nhúng trong PHP. Mọi style qua class hoặc id.
+2. **Màu: một bộ token tập trung duy nhất** trong `:root` của child theme. Không hardcode hex rời rạc, không tự đổi màu brand khi đang làm việc khác.
+3. Ưu tiên tái dùng class của theme cha, không viết lại component. Không tạo nhiều file CSS.
+4. **Mỗi lần thêm hoặc sửa UI phải làm và kiểm tra cả mobile trong cùng lần sửa.** Kiểm ở ~1080 / 760 / 480px, bảng so sánh phải scroll ngang gọn.
+
+### I. Vận hành WordPress
+
+1. **Không sửa file bên trong plugin đã mua license**, update là mất sạch. Custom đặt ở child theme, mu-plugin, hoặc thư mục override có script apply lại.
+2. **Sửa file PHP trên server thì phải purge cache** (OPcache + object cache + page cache), nếu không sẽ tưởng code không ăn.
+3. Job hàng loạt: đặt lock chống chạy chồng, **dọn hàng đợi và cron rác sau khi xong**, nếu không DB phình rất nhanh.
+4. Backup DB trước mọi thao tác hàng loạt hoặc migration.
+5. Trước khi tự code sitemap, breadcrumb, schema, redirect: **kiểm tra plugin SEO đã có sẵn chưa** rồi mới viết mới.
+
+### J. Bảo mật
+
+1. **Không bao giờ commit hoặc in ra**: `.env`, `docs/credentials.md`, API key, mật khẩu, IP server, số tài khoản. Đưa vào `.gitignore` **trước** khi tạo file.
+2. Kiểm tra `git status` trước mỗi commit, không `git add -A` khi chưa nhìn danh sách file.
+
+## 5. Checklist trước khi publish một bài
+
+- [ ] Đã có người đọc lại toàn bài, không publish thẳng bản AI vừa sinh.
+- [ ] Spec, giá, model number đã đối chiếu nguồn thật.
+- [ ] Không có em dash, không có gạch nối làm separator trong title, không có từ `test / tested / hands-on`.
+- [ ] Pros và cons cân bằng, có nêu ai không nên mua.
+- [ ] Disclosure nằm phía trên link affiliate đầu tiên. YMYL thì có disclaimer.
+- [ ] Tác giả, ngày publish, ngày cập nhật đầy đủ.
+- [ ] Title, meta description, slug đúng quy ước, slug không chứa năm.
+- [ ] Internal link tới category cha và ít nhất một bài liên quan.
+- [ ] Ảnh có quyền dùng hợp pháp, có alt thật, đã nén.
+- [ ] Kiểm tra hiển thị mobile.
+
+## 6. Checklist trước khi deploy
+
+- [ ] Backup DB và source.
+- [ ] `git status` sạch, không có `.env` hay credential trong diff.
+- [ ] Kiểm tra `robots.txt`, sitemap, canonical, noindex đúng như mục 3.
+- [ ] Purge toàn bộ cache sau khi deploy.
+- [ ] Bấm thử link affiliate thật, xác nhận tracking ID đúng.
+- [ ] Kiểm tra tốc độ và mobile trên URL production.
+
+## 7. Placeholder cần thay
+
+`{{BRAND}}` · `{{DOMAIN}}` · `{{NICHE}}` · `{{NETWORK}}` · `{{SCORE_NAME}}` · `{{N_PARENT}}` · `{{N_CHILD}}` · `{{YYYY-MM-DD}}`
+
+Soát bằng `grep -n "{{" CLAUDE.md`.
+
+## 8. Prompt mở đầu phiên
+
+```
+Đọc CLAUDE.md trước.
+Hôm nay tôi cần: {{việc cần làm}}.
+Lên plan trước, nêu rõ sẽ sửa file nào và rủi ro gì, chờ tôi duyệt rồi mới làm.
+```
+
+Khi Claude làm sai, nhắc thẳng tên rule (vd "vi phạm rule H1, không được inline CSS"). Nếu rule mơ hồ thì sửa lại rule trong file này. Đây là file sống, chỉnh dần theo lỗi thực tế gặp phải.

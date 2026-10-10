@@ -330,10 +330,19 @@ act_site_add() {
   # quyền để cài/sửa/xoá plugin+theme + upload media từ wp-admin (không đòi FTP)
   fix_perms "$id"
 
+  # CLAUDE.md ở thư mục gốc site: Claude Code mở trong thư mục này sẽ tự đọc luật dự án.
+  local claude_note=""
+  local claude_def=yes; [ "$type" = "vanilla" ] && claude_def=no
+  if ui_yesno "Tạo file CLAUDE.md (luật dự án cho Claude Code) ở thư mục gốc site?\n\n${dir}/CLAUDE.md" "$claude_def"; then
+    claude_md_prompt_write "$id" "$domain" \
+      && claude_note="\n>> Claude Code: cd ${dir} && claude  (tự đọc CLAUDE.md; điền nốt chỗ {{...}} trong file)." \
+      || warn "Tạo CLAUDE.md chưa xong - tạo sau bằng: lat claude-md ${domain}"
+  fi
+
   local ssl_note="Cert Let's Encrypt sẽ tự cấp khi domain trỏ về VPS."
   [ "$ssl" = "origin" ] && ssl_note="Đã dùng Cloudflare Origin Cert. Bật proxy (cam) + SSL/TLS = Full (strict)."
   [ "$ssl" = "cloudflare" ] && ssl_note="Đã tạo cert tự ký. Bật Cloudflare proxy (CAM) + đặt SSL/TLS = Full (KHÔNG phải strict)."
 
   local other_host="www.${domain}"; [ "$canon" = "www" ] && other_host="${domain}"
-  ui_msg "Site đã sẵn sàng: https://${canon_host}\n\nWP Admin : https://${canon_host}/wp-admin\nUser     : ${admin_user}\nPassword : ${admin_pass}\nLoại     : ${type}\nSSL      : ${ssl}\nThư mục  : ${SITES_ROOT}/${domain}  (-> ${dir})\n\n>> Trỏ A record '${domain}' (và www) về IP VPS này.\n>> ${ssl_note}\n>> Domain chính: ${canon_host} (https://${other_host} tự 301 về domain chính).\n>> Search engine: ĐANG CHẶN index (chống trùng lặp). Khi chạy thật: Settings > Reading, bỏ tick 'Discourage search engines'.\n>> Lưu lại mật khẩu trên (sẽ không hiện lại)."
+  ui_msg "Site đã sẵn sàng: https://${canon_host}\n\nWP Admin : https://${canon_host}/wp-admin\nUser     : ${admin_user}\nPassword : ${admin_pass}\nLoại     : ${type}\nSSL      : ${ssl}\nThư mục  : ${SITES_ROOT}/${domain}  (-> ${dir})\n\n>> Trỏ A record '${domain}' (và www) về IP VPS này.\n>> ${ssl_note}\n>> Domain chính: ${canon_host} (https://${other_host} tự 301 về domain chính).\n>> Search engine: ĐANG CHẶN index (chống trùng lặp). Khi chạy thật: Settings > Reading, bỏ tick 'Discourage search engines'.\n>> Lưu lại mật khẩu trên (sẽ không hiện lại).${claude_note}"
 }

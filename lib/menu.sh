@@ -60,6 +60,7 @@ site_submenu() {
       4 "Bật / Tắt site" \
       5 "Xem logs" \
       6 "Xoá site" \
+      7 "Tạo CLAUDE.md (Claude Code)" \
       0 "Quay lại")" || return
     case "$c" in
       1) ui_msg "$(site_info_text "$id")" ;;
@@ -68,6 +69,7 @@ site_submenu() {
       4) toggle_site "$id" ;;
       5) ui_msg "$(act_logs "$id" php | tail -40)" ;;
       6) act_site_remove "$id"; return ;;
+      7) act_claude_md "$id" ;;
       0|"") return ;;
     esac
   done
