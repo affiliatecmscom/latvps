@@ -346,6 +346,46 @@ fetch_demo_bundle() {
   return 0
 }
 
+# Email chủ demo đi theo dump: admin_email, new_admin_email, auto_core_update_notified, email liên hệ
+# trong theme mod, bình luận, bài. `user create` chỉ đặt email cho user, KHÔNG đụng option
+# -> mail hệ thống gửi về chủ demo, footer hiện email chủ demo. Đổi mọi chỗ sang email học viên.
+# Viết hoa thường khác nhau là chuỗi khác nhau với search-replace, nên liệt kê đủ từng biến thể.
+DEMO_OWNER_EMAILS=(syverson@retailcoupons.com contact@affiliatecms.com contact@AffiliateCMS.com)
+
+# acms_scrub_demo_email <id> <email> : thay email demo bằng <email> trên toàn DB site.
+acms_scrub_demo_email() {
+  local id="$1" email="$2" cur e
+  [ -n "$email" ] || return 1
+  cur="$(wp_run "$id" option get admin_email 2>/dev/null | tr -d '[:space:]')"
+  for e in "$cur" "${DEMO_OWNER_EMAILS[@]}"; do
+    [ -n "$e" ] && [ "$e" != "$email" ] || continue
+    wp_run "$id" search-replace "$e" "$email" --all-tables --skip-columns=guid >/dev/null 2>&1 || true
+  done
+  wp_run "$id" option update admin_email "$email" >/dev/null 2>&1 || true
+  wp_run "$id" option delete new_admin_email adminhash auto_core_update_notified >/dev/null 2>&1 || true
+}
+
+# Migration một lần cho site cài TRƯỚC v3.20.4: chỉ đụng site có admin_email còn là email chủ demo
+# và site.conf có ADMIN_EMAIL khác. Đánh dấu DEMO_EMAIL_FIXED để không chạy lại mỗi lần gọi lat.
+migrate_demo_email() {
+  local id email cur e hit
+  for id in $(list_site_ids); do
+    [ "$(site_get "$id" DEMO_EMAIL_FIXED)" = "1" ] && continue
+    docker ps --format '{{.Names}}' 2>/dev/null | grep -qx "${id}_php" || continue
+    email="$(site_get "$id" ADMIN_EMAIL)"
+    cur="$(wp_run "$id" option get admin_email 2>/dev/null | tr -d '[:space:]')"
+    [ -n "$cur" ] || { site_set "$id" DEMO_EMAIL_FIXED 1; continue; }
+    hit=0
+    for e in "${DEMO_OWNER_EMAILS[@]}"; do [ "$cur" = "$e" ] && hit=1; done
+    if [ "$hit" = 1 ] && [ -n "$email" ] && [ "$email" != "$cur" ]; then
+      info "Đổi email quản trị của site ${id}: ${cur} -> ${email}"
+      acms_scrub_demo_email "$id" "$email"
+      wp_run "$id" cache flush >/dev/null 2>&1 || true
+    fi
+    site_set "$id" DEMO_EMAIL_FIXED 1
+  done
+}
+
 # Import NỘI DUNG + CẤU HÌNH demo bằng FULL CLONE (DB + uploads) -> giống hệt demo:
 # sản phẩm/từ khóa (bảng acms), logo/sidebar/widget (theme_mods), bài/trang/menu/ảnh.
 # Nạp database.sql (đã sanitize secret) đè DB site, copy uploads, tạo lại admin (dump bỏ users),
@@ -398,6 +438,8 @@ acms_import_demo_content() {
   docker exec "${id}_db" sh -c 'mariadb -uwordpress -p"$MARIADB_PASSWORD" wordpress -e "DELETE FROM wp_usermeta WHERE user_id NOT IN (SELECT ID FROM wp_users);"' >/dev/null 2>&1 || true
   wp_run "$id" option update users_can_register 0 >/dev/null 2>&1 || true
   wp_run "$id" option update default_role subscriber >/dev/null 2>&1 || true
+
+  acms_scrub_demo_email "$id" "$admin_email"
 
   info "Đổi URL demo -> ${canon_host} ..."
   wp_run "$id" search-replace "$demo_host" "$canon_host" --all-tables --skip-columns=guid >/dev/null 2>&1 || true

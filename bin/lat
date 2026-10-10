@@ -40,6 +40,13 @@ EOF
 }
 
 cmd="${1:-menu}"; shift || true
+
+# Migration một lần sau khi cập nhật (site cài trước v3.20.4 còn email chủ demo). Cần root để
+# chạy wp-cli; bỏ qua lệnh chỉ đọc và chính lệnh update (bản mới chưa nạp trong tiến trình này).
+case "$cmd" in
+  version|-v|--version|help|-h|--help|update|self-update|update-check|ls|list|status) ;;
+  *) [ "$(id -u)" = 0 ] && { migrate_demo_email || true; } ;;
+esac
 case "$cmd" in
   menu)         require_root; main_menu ;;
   add)          require_root; act_site_add "$@" ;;

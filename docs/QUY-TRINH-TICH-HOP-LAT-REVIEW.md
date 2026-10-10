@@ -981,3 +981,27 @@ Kiểm trên demo `iflmmo.lat.vn`:
 
 **Học viên LAT Review:** vào Dashboard > Updates, cập nhật theme `LAT Review Child` lên 1.0.2. Site cài mới
 sau `lat update` có sẵn cả hai lớp. Sau khi dán mã GTM, trang có thể chưa hiện mã ngay vì nginx cache giữ trang tối đa 60 phút.
+
+## 25. LỘ EMAIL CHỦ DEMO SANG SITE HỌC VIÊN: LATVPS 3.20.4 (2026-10-10)
+
+**Vấn đề:** khi nạp demo, dump đè cả `wp_options`. `lat add` tạo lại user `admin` với email học viên nhưng
+không đụng option, nên site học viên giữ email chủ demo: `admin_email`, `new_admin_email`,
+`auto_core_update_notified` (bản LAT Review: `syverson@retailcoupons.com`; bản AffiliateCMS:
+`contact@affiliatecms.com`, kèm theme mod `acms_contact_email` hiện ở footer, 2 bình luận, 2 bài viết
+dạng `contact@AffiliateCMS.com`). Mail hệ thống của WordPress gửi về chủ demo.
+
+| Thành phần | Sửa |
+|---|---|
+| `lib/common.sh` `acms_scrub_demo_email` | Sau khi nạp demo: `search-replace` admin_email hiện tại cùng danh sách `DEMO_OWNER_EMAILS` sang email học viên, đặt `admin_email`, xoá `new_admin_email`, `adminhash`, `auto_core_update_notified` |
+| `lib/common.sh` `migrate_demo_email` + `bin/lat` | Site cài trước 3.20.4: lần đầu chạy `lat` (lệnh cần root) sau khi cập nhật, site nào có `admin_email` còn là email chủ demo thì đổi sang `ADMIN_EMAIL` trong `site.conf`. Đánh dấu `DEMO_EMAIL_FIXED=1`, không chạy lại |
+| `tools/build-demo-bundle.sh` (cả `/opt/demo-lat` lẫn `/opt/demo-iflmmo`) | Bước làm sạch: `admin_email` thành `admin@<demo_host>`, email chủ demo thành `contact@<demo_host>` (sửa cả độ dài `s:N` của chuỗi serialize), bỏ `auto_core_update_notified`. Còn sót email chủ demo thì DỪNG build |
+| Hai bundle đang phục vụ | Vá tại chỗ, chỉ thay `database.sql` (không build lại, giữ nguyên nội dung đã kiểm). Bản cũ ở `/opt/backups/demo-bundle-truoc-scrub-email-20261010/` |
+
+Học viên dùng `lat` cũ vẫn nhận bundle mới, nên email thành `admin@`/`contact@<domain học viên>` sau bước đổi domain.
+
+**Không đổi:** cột `network` = `retailcouponscom` trong `wp_acms_coupons` là tên nguồn do API coupon trả về,
+không hiển thị ở đâu, đồng bộ lần sau API ghi lại y nguyên. Bài demo AffiliateCMS còn nhắc tên thương hiệu
+"RetailCoupons.com" trong FAQ (nội dung bài, không phải email).
+
+Kiểm: site tạm nạp từng dump thật, sau bước làm sạch không còn email chủ demo, `get_theme_mod` đọc đúng;
+migration chạy lần 1 đổi đúng, lần 2 bỏ qua; md5 tải qua `app.lat.vn` khớp tệp đã vá, license giả trả 403.
