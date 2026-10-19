@@ -131,3 +131,23 @@ setup() { load_lat; }
   [[ "$output" =~ ^s-[0-9a-f]{6}$ ]]
   [ "$(new_site_id)" != "$(new_site_id)" ]
 }
+
+# ---------- mốc core an toàn (vá bảo mật 2026-10, dùng version_gt) ----------
+@test "LATVPS_WP_MIN_SAFE: core cũ hơn mốc an toàn bị nhận là cần nâng" {
+  for v in 6.9 7.0 7.0.1 6.8.3; do
+    run version_gt "$LATVPS_WP_MIN_SAFE" "$v"
+    [ "$status" -eq 0 ] || { echo "bỏ sót bản lỗi: $v"; false; }
+  done
+}
+
+@test "LATVPS_WP_MIN_SAFE: core từ mốc an toàn trở lên không bị nâng" {
+  for v in 7.0.2 7.0.10 7.1 7.1.3 8.0; do
+    run version_gt "$LATVPS_WP_MIN_SAFE" "$v"
+    [ "$status" -ne 0 ] || { echo "nâng nhầm: $v"; false; }
+  done
+}
+
+@test "mu-plugin chặn /batch/v1: có trong assets và site_add chép nó" {
+  grep -q "rest_pre_dispatch" "${LAT_ROOT}/assets/mu-plugins/latvps-rest-batch-guard.php"
+  grep -q "latvps-rest-batch-guard.php" "${LAT_ROOT}/lib/actions/site_add.sh"
+}

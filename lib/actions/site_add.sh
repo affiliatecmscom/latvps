@@ -158,6 +158,7 @@ act_site_add() {
   mkdir -p "$dir/wp-content/mu-plugins"
   cp "${WPF_ROOT}/assets/mu-plugins/proxy-ssl.php" "$dir/wp-content/mu-plugins/proxy-ssl.php" 2>/dev/null || true
   cp "${WPF_ROOT}/assets/mu-plugins/latvps-hardening.php" "$dir/wp-content/mu-plugins/latvps-hardening.php" 2>/dev/null || true
+  cp "${WPF_ROOT}/assets/mu-plugins/latvps-rest-batch-guard.php" "$dir/wp-content/mu-plugins/latvps-rest-batch-guard.php" 2>/dev/null || true
 
   # plugin/theme cho LAT Review (ban moi). Lay tu payload/lat-review/, hoan toan tach khoi
   # payload cua ban cu, nen mot may chay ca hai loai site cung khong lan bo plugin.

@@ -386,6 +386,66 @@ migrate_demo_email() {
   done
 }
 
+# Vá bảo mật 2026-10: tool "wp2shell" đánh core cũ qua REST /batch/v1 + customize_changeset (tự tạo
+# admin w2s_*@wp2shell.local); core từ 7.0.2 trở lên không dính. Core nằm trong volume wphtml nên
+# `lat upgrade` (pull image) KHÔNG nâng core -> site cài sớm có thể vẫn chạy bản lỗi.
+LATVPS_WP_MIN_SAFE="7.0.2"
+
+# secure_site <id>: chép mu-plugin chặn /batch/v1, tắt File Editor nếu chưa tắt, nâng core bản vá
+# (minor, backup trước) khi < LATVPS_WP_MIN_SAFE, cảnh báo dấu hiệu xâm nhập. Trả 1 nếu chưa xong.
+secure_site() {
+  local id="$1" dir ver rc=0 hits
+  dir="$(site_dir "$id")"
+
+  mkdir -p "$dir/wp-content/mu-plugins"
+  if cp "${WPF_ROOT}/assets/mu-plugins/latvps-rest-batch-guard.php" "$dir/wp-content/mu-plugins/latvps-rest-batch-guard.php"; then
+    docker exec "${id}_php" chown www-data:www-data /var/www/html/wp-content/mu-plugins/latvps-rest-batch-guard.php >/dev/null 2>&1 || true
+  else
+    warn "Không chép được mu-plugin chặn /batch/v1 cho ${id}."; rc=1
+  fi
+
+  # Chỉ thêm khi CHƯA định nghĩa (site mới đã có trong WORDPRESS_CONFIG_EXTRA) -> tránh define trùng.
+  if [ "$(wp_run "$id" eval 'echo defined("DISALLOW_FILE_EDIT") ? 1 : 0;' 2>/dev/null)" = "0" ]; then
+    wp_run "$id" config set DISALLOW_FILE_EDIT true --raw >/dev/null 2>&1 || { warn "Không tắt được File Editor cho ${id}."; rc=1; }
+  fi
+
+  ver="$(wp_run "$id" core version 2>/dev/null | tr -d '[:space:]')"
+  if [ -z "$ver" ]; then
+    warn "Không đọc được phiên bản WordPress của ${id}."; rc=1
+  elif version_gt "$LATVPS_WP_MIN_SAFE" "$ver"; then
+    info "Site ${id} chạy WordPress ${ver} (có lỗ hổng wp2shell) -> backup rồi nâng bản vá..."
+    if _backup_one "$id" >/dev/null; then
+      wp_run "$id" core update --minor >/dev/null 2>&1 || true
+      wp_run "$id" core update-db >/dev/null 2>&1 || true
+      ver="$(wp_run "$id" core version 2>/dev/null | tr -d '[:space:]')"
+    fi
+    if version_gt "$LATVPS_WP_MIN_SAFE" "${ver:-0}"; then
+      warn "Site ${id} vẫn ở WordPress ${ver:-?}: vào wp-admin > Updates nâng lên bản mới nhất NGAY."; rc=1
+    else
+      ok "Site ${id} đã lên WordPress ${ver}."
+    fi
+  fi
+
+  # Dấu hiệu đã bị khai thác: chỉ cảnh báo, không tự xoá (cần người xem xét).
+  hits="$(wp_run "$id" user list --fields=user_login,user_email --format=csv 2>/dev/null | grep -ciE '^w2s_|@wp2shell\.local|^wpsupport_|@wp-mail\.net' || true)"
+  [ "${hits:-0}" -gt 0 ] && warn "Site ${id} có ${hits} user đáng ngờ (w2s_/wp2shell/wpsupport_). Có thể đã bị xâm nhập, liên hệ hỗ trợ."
+  [ "$(wp_run "$id" plugin get seo-by-rank-math-pro --field=version 2>/dev/null)" = "3.0.123" ] \
+    && warn "Site ${id} dùng Rank Math PRO 3.0.123 (bản bị chèn mã độc). Gỡ ngay, cài 3.0.124 và liên hệ hỗ trợ."
+  return "$rc"
+}
+
+# Migration cho site cài TRƯỚC v3.22.0. Đánh dấu SEC_202610_FIXED khi đã vá đủ; chưa đủ thì lần chạy
+# lat sau thử lại.
+migrate_security_202610() {
+  local id
+  for id in $(list_site_ids); do
+    [ "$(site_get "$id" SEC_202610_FIXED)" = "1" ] && continue
+    docker ps --format '{{.Names}}' 2>/dev/null | grep -qx "${id}_php" || continue
+    info "Vá bảo mật 2026-10 cho site ${id}..."
+    secure_site "$id" && site_set "$id" SEC_202610_FIXED 1
+  done
+}
+
 # Import NỘI DUNG + CẤU HÌNH demo bằng FULL CLONE (DB + uploads) -> giống hệt demo:
 # sản phẩm/từ khóa (bảng acms), logo/sidebar/widget (theme_mods), bài/trang/menu/ảnh.
 # Nạp database.sql (đã sanitize secret) đè DB site, copy uploads, tạo lại admin (dump bỏ users),

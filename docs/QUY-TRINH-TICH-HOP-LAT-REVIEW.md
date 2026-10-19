@@ -1023,3 +1023,22 @@ core nên thư mục gốc site không lộ ra web.
 
 **Sửa khuôn:** bản trên affiliatecms.com đổi thì phải chép lại vào `templates/claude/CLAUDE.md.tmpl` và phát
 hành `lat`, học viên không tự nhận bản trên web.
+
+## 27. VÁ BẢO MẬT WP2SHELL + RANK MATH PRO 3.0.123: LATVPS 3.22.0 (2026-10-19)
+
+**Bối cảnh:** tool công khai "wp2shell" đánh core WordPress cũ qua REST `/batch/v1` (hoặc
+`?rest_route=/batch/v1`) kết hợp `customize_changeset`, tự tạo admin `w2s_*@wp2shell.local`. Core từ 7.0.2
+không dính. Rank Math SEO PRO 3.0.123 bị chèn mã độc (tải từ 20:02 UTC 15/10 tới 07:12 UTC 16/10/2026).
+
+**Lỗ hổng phía LATVPS:** core nằm trong volume `wphtml`, `lat upgrade` chỉ pull image nên KHÔNG nâng core.
+Site cài sớm có thể vẫn chạy bản lỗi nếu WordPress không tự cập nhật được.
+
+| Thành phần | Nội dung |
+|---|---|
+| `assets/mu-plugins/latvps-rest-batch-guard.php` | Trả 401 cho `/batch/v1` khi chưa đăng nhập (hook `rest_pre_dispatch`). `lat add` chép vào mọi site mới |
+| `lib/common.sh` `secure_site` | Chép mu-plugin trên; thêm `DISALLOW_FILE_EDIT` nếu CHƯA định nghĩa (site mới đã có trong `WORDPRESS_CONFIG_EXTRA`, define trùng sinh PHP warning); core < `LATVPS_WP_MIN_SAFE` (7.0.2) thì `lat backup` rồi `wp core update --minor`; cảnh báo user `w2s_`/`@wp2shell.local`/`wpsupport_`/`@wp-mail.net` và Rank Math PRO 3.0.123 (chỉ cảnh báo, không tự xoá) |
+| `lib/common.sh` `migrate_security_202610` + `bin/lat` | Site cài trước 3.22.0: lần đầu chạy `lat` (lệnh cần root) sau khi cập nhật. Đánh dấu `SEC_202610_FIXED=1` khi vá đủ; chưa đủ (vd core vẫn cũ) thì lần sau thử lại |
+
+Kiểm: site tạm WordPress 7.0.1 không có `DISALLOW_FILE_EDIT`: migration backup, nâng lên 7.0.7, thêm
+hằng, chép mu-plugin, lần 2 bỏ qua; thêm user `w2s_` thì in cảnh báo. Trên VPS chủ (bestproducts.org,
+iflmmo.affiliatecms.com, iflmmo.lat.vn) POST `/batch/v1` chưa đăng nhập trả 401, `/wp-json/` vẫn 200.
