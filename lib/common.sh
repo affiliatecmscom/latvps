@@ -446,6 +446,44 @@ migrate_security_202610() {
   done
 }
 
+# Vá PHP2Shell (CVE-2026-109618/109619, công bố 21/10/2026): RCE không cần đăng nhập trong lõi PHP,
+# dính mọi SAPI (php-fpm, mod_php, FrankenPHP). Bản vá theo nhánh: 8.2.35 / 8.3.36 / 8.4.27 / 8.5.12;
+# 8.1 trở xuống hết hỗ trợ, không có bản vá. PHP nằm trong IMAGE (khác core WP) nên pull lại là đủ.
+# php_is_patched <phiên bản PHP>: trả 0 nếu đã vá.
+php_is_patched() {
+  local v="$1" min
+  case "$v" in
+    8.2.*) min="8.2.35" ;;
+    8.3.*) min="8.3.36" ;;
+    8.4.*) min="8.4.27" ;;
+    8.5.*) min="8.5.12" ;;
+    [0-7].*|8.[01].*|"") return 1 ;;
+    *) return 0 ;;   # nhánh mới hơn 8.5 ra sau ngày vá
+  esac
+  ! version_gt "$min" "$v"
+}
+
+# Migration cho site cài TRƯỚC v3.23.0: PHP trong container cũ thì pull image mới rồi tạo lại container
+# php (dữ liệu ở volume, không mất). Đánh dấu PHP2SHELL_FIXED khi đã lên bản vá; chưa được thì lần sau thử lại.
+migrate_php2shell_202610() {
+  local id dir ver
+  for id in $(list_site_ids); do
+    [ "$(site_get "$id" PHP2SHELL_FIXED)" = "1" ] && continue
+    docker ps --format '{{.Names}}' 2>/dev/null | grep -qx "${id}_php" || continue
+    ver="$(docker exec "${id}_php" php -r 'echo PHP_VERSION;' 2>/dev/null)"
+    if ! php_is_patched "$ver"; then
+      dir="$(site_dir "$id")"
+      info "Site ${id} chạy PHP ${ver:-?} (lỗ hổng PHP2Shell) -> tải image vá và khởi động lại PHP..."
+      docker compose -f "$dir/docker-compose.yml" --env-file "$dir/.env" pull -q php >/dev/null 2>&1 \
+        && docker compose -f "$dir/docker-compose.yml" --env-file "$dir/.env" up -d php >/dev/null 2>&1
+      ver="$(docker exec "${id}_php" php -r 'echo PHP_VERSION;' 2>/dev/null)"
+      php_is_patched "$ver" || { warn "Site ${id} vẫn ở PHP ${ver:-?}: chạy 'lat upgrade' hoặc liên hệ hỗ trợ NGAY."; continue; }
+      ok "Site ${id} đã lên PHP ${ver}."
+    fi
+    site_set "$id" PHP2SHELL_FIXED 1
+  done
+}
+
 # Import NỘI DUNG + CẤU HÌNH demo bằng FULL CLONE (DB + uploads) -> giống hệt demo:
 # sản phẩm/từ khóa (bảng acms), logo/sidebar/widget (theme_mods), bài/trang/menu/ảnh.
 # Nạp database.sql (đã sanitize secret) đè DB site, copy uploads, tạo lại admin (dump bỏ users),

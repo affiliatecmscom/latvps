@@ -151,3 +151,23 @@ setup() { load_lat; }
   grep -q "rest_pre_dispatch" "${LAT_ROOT}/assets/mu-plugins/latvps-rest-batch-guard.php"
   grep -q "latvps-rest-batch-guard.php" "${LAT_ROOT}/lib/actions/site_add.sh"
 }
+
+# ---------- PHP2Shell (CVE-2026-109618/109619): mốc PHP đã vá theo nhánh ----------
+@test "php_is_patched: bản PHP chưa vá hoặc hết hỗ trợ bị nhận là cần nâng" {
+  for v in 8.3.31 8.3.35 8.4.24 8.4.26 8.2.34 8.5.11 8.1.33 7.4.33 5.6.40 ""; do
+    run php_is_patched "$v"
+    [ "$status" -ne 0 ] || { echo "bỏ sót bản lỗi: $v"; false; }
+  done
+}
+
+@test "php_is_patched: bản đã vá trở lên không bị nâng" {
+  for v in 8.3.36 8.3.40 8.4.27 8.4.30 8.2.35 8.5.12 8.6.0 9.0.0; do
+    run php_is_patched "$v"
+    [ "$status" -eq 0 ] || { echo "nâng nhầm: $v"; false; }
+  done
+}
+
+@test "lat chạy migration PHP2Shell và lat add pull image PHP trước khi up" {
+  grep -q "migrate_php2shell_202610" "${LAT_ROOT}/bin/lat"
+  grep -q "pull -q php" "${LAT_ROOT}/lib/actions/site_add.sh"
+}

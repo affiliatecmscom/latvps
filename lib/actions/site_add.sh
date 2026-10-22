@@ -194,6 +194,8 @@ act_site_add() {
   fi
 
   info "Khởi động container (nginx + php-fpm + mariadb + redis)..."
+  # Pull trước: compose up chỉ dùng image có sẵn trên máy, image cũ có thể còn PHP dính PHP2Shell.
+  docker compose -f "$dir/docker-compose.yml" --env-file "$dir/.env" pull -q php >/dev/null 2>&1 || warn "Không pull được image PHP mới, dùng bản có sẵn."
   docker compose -f "$dir/docker-compose.yml" --env-file "$dir/.env" up -d || { _add_rollback; return 1; }
   wait_for_db "$db" "$db_password" || { _add_rollback; return 1; }
 

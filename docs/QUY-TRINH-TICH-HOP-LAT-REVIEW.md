@@ -1042,3 +1042,22 @@ Site cài sớm có thể vẫn chạy bản lỗi nếu WordPress không tự c
 Kiểm: site tạm WordPress 7.0.1 không có `DISALLOW_FILE_EDIT`: migration backup, nâng lên 7.0.7, thêm
 hằng, chép mu-plugin, lần 2 bỏ qua; thêm user `w2s_` thì in cảnh báo. Trên VPS chủ (bestproducts.org,
 iflmmo.affiliatecms.com, iflmmo.lat.vn) POST `/batch/v1` chưa đăng nhập trả 401, `/wp-json/` vẫn 200.
+
+## 28. VÁ PHP2SHELL (CVE-2026-109618/109619): LATVPS 3.23.0 (2026-10-22)
+
+**Bối cảnh:** 21/10/2026 PHP công bố 2 lỗi RCE không cần đăng nhập trong lõi PHP (OOM khi parse request,
+use-after-free do state toàn cục cũ), CVSS 9.2, dính mọi SAPI (php-fpm, mod_php, FrankenPHP). Đã có khai
+thác thật (honeypot ghi nhận từ 17/10). Bản vá: 8.2.35 / 8.3.36 / 8.4.27 / 8.5.12; 8.1 trở xuống không có bản vá.
+
+**Lỗ hổng phía LATVPS:** PHP nằm trong image `wordpress:fpm-alpine`. Site đã cài giữ container cũ cho tới khi
+chạy `lat upgrade`; `lat add` dùng image có sẵn trên máy nên site MỚI trên VPS cũ cũng dính.
+
+| Thành phần | Nội dung |
+|---|---|
+| `lib/common.sh` `php_is_patched` | Mốc vá theo nhánh 8.2/8.3/8.4/8.5; < 8.2 luôn coi là chưa vá; nhánh > 8.5 coi là đã vá |
+| `lib/common.sh` `migrate_php2shell_202610` + `bin/lat` | Lần đầu chạy `lat` (lệnh cần root) sau khi cập nhật: PHP chưa vá thì `compose pull php` + `up -d php` (dữ liệu ở volume, không mất). Đánh dấu `PHP2SHELL_FIXED=1`; chưa lên được thì cảnh báo và lần sau thử lại |
+| `lib/actions/site_add.sh` | `compose pull -q php` trước `up -d` |
+
+Kiểm: VPS chủ 15 container PHP (WP + Laravel/FrankenPHP + adminer) đã lên 8.3.36 / 8.4.27; không thấy dấu
+hiệu khai thác (log nginx/Caddy từ 17/10, checksum core WP, admin, cron, tiến trình, kết nối ra ngoài).
+
